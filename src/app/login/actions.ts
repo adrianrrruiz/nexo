@@ -18,10 +18,10 @@ export async function requestOtp(
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true },
+    options: { shouldCreateUser: false },
   })
 
-  if (error) return { ok: false, message: error.message, email }
+  if (error) return { ok: false, message: 'Este correo no está autorizado.', email }
   return { ok: true, message: 'Te enviamos un código. Revisa tu correo.', email }
 }
 

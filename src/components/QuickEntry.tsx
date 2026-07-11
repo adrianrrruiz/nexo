@@ -2,7 +2,9 @@
 
 import { useActionState, useEffect, useState } from 'react'
 import { addTransaction, type EntryState } from '@/app/(app)/dashboard/actions'
-import { formatCOPFromCents } from '@/lib/format'
+import DateTextField from '@/components/DateTextField'
+import { sortCategoriesForSelect } from '@/lib/categories'
+import { formatCOPFromCents, formatDateInputValue } from '@/lib/format'
 import type { Account, Category, TransactionType } from '@/lib/supabase/types'
 
 const TYPES: { value: TransactionType; label: string; active: string }[] = [
@@ -29,13 +31,19 @@ const FIELD =
 export default function QuickEntry({
   accounts,
   categories,
+  defaultDate,
+  trigger,
 }: {
   accounts: Pick<Account, 'id' | 'name'>[]
   categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>[]
+  defaultDate?: string
+  trigger?: React.ReactNode
 }) {
+  const today = formatDateInputValue(new Date())
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<TransactionType>('expense')
   const [amountCents, setAmountCents] = useState('')
+  const [dateValue, setDateValue] = useState(defaultDate ?? today)
   const [state, formAction, pending] = useActionState<EntryState, FormData>(
     addTransaction,
     null
@@ -51,17 +59,37 @@ export default function QuickEntry({
 
   const kind = type === 'income' ? 'income' : 'expense'
   const cats = categories.filter((c) => c.kind === kind)
-  const today = new Date().toLocaleDateString('en-CA', {
-    timeZone: 'America/Bogota',
-  })
+  const parentCats = sortCategoriesForSelect(cats).filter((c) => !c.parent_id)
+  const childrenByParent = new Map<string, typeof cats>()
+  for (const category of cats) {
+    if (!category.parent_id) continue
+    const list = childrenByParent.get(category.parent_id)
+    if (list) list.push(category)
+    else childrenByParent.set(category.parent_id, [category])
+  }
+  const openPanel = () => {
+    setAmountCents('')
+    setDateValue(defaultDate ?? today)
+    setOpen(true)
+  }
 
   if (!open) {
+    if (trigger) {
+      return (
+        <button
+          type="button"
+          onClick={openPanel}
+          aria-label="Nuevo movimiento"
+          className="inline-flex appearance-none bg-transparent p-0"
+        >
+          {trigger}
+        </button>
+      )
+    }
+
     return (
       <button
-        onClick={() => {
-          setAmountCents('')
-          setOpen(true)
-        }}
+        onClick={openPanel}
         className="fixed bottom-24 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-deep text-neutral-950 shadow-lg shadow-brand/25 active:scale-95 transition-transform"
         aria-label="Nuevo movimiento"
       >
@@ -195,16 +223,25 @@ export default function QuickEntry({
           {type !== 'transfer' && (
             <select name="category_id" className={FIELD}>
               <option value="">Categoría (opcional)</option>
-              {cats.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.parent_id ? '— ' : ''}
-                  {c.name}
-                </option>
-              ))}
+              {parentCats.map((parent) => {
+                const children = (childrenByParent.get(parent.id) ?? []).sort((a, b) =>
+                  a.name.localeCompare(b.name, 'es')
+                )
+                return (
+                  <optgroup key={parent.id} label={parent.name}>
+                    <option value={parent.id}>{parent.name}</option>
+                    {children.map((child) => (
+                      <option key={child.id} value={child.id}>
+                        {child.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )
+              })}
             </select>
           )}
 
-          <input type="date" name="date" defaultValue={today} className={FIELD} />
+          <DateTextField name="date" value={dateValue} onChange={setDateValue} />
 
           <input
             type="text"

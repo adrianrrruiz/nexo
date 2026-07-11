@@ -50,7 +50,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-center px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-      <div className="flex w-full max-w-sm items-center justify-between rounded-full border border-white/10 bg-neutral-950/75 px-2.5 py-2 shadow-2xl shadow-black/60 backdrop-blur-xl">
+      <div className="flex w-fit items-center justify-center gap-1 rounded-full border border-white/10 bg-neutral-950/75 px-2 py-2 shadow-2xl shadow-black/60 backdrop-blur-xl">
         {ITEMS.map((item) => {
           const active = pathname.startsWith(item.href)
           return (
@@ -58,7 +58,7 @@ export default function BottomNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? 'page' : undefined}
-              className={`flex flex-col items-center gap-0.5 rounded-full px-4 py-1.5 transition-colors ${
+              className={`flex min-w-0 flex-col items-center gap-0.5 rounded-full px-3 py-1.5 transition-colors ${
                 active ? 'bg-brand/10 text-brand' : 'text-neutral-500'
               }`}
             >

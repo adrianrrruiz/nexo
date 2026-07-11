@@ -30,6 +30,23 @@ export function formatDay(iso: string): string {
   })
 }
 
+/** Valor YYYY-MM-DD para inputs de fecha, en zona Colombia. */
+export function formatDateInputValue(iso: string | Date): string {
+  return new Date(iso).toLocaleDateString('en-CA', {
+    timeZone: 'America/Bogota',
+  })
+}
+
+/** Fecha larga legible: "7 de julio de 2026". */
+export function formatLongDate(value: string): string {
+  return new Date(`${value}T12:00:00-05:00`).toLocaleDateString('es-CO', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'America/Bogota',
+  })
+}
+
 /** Rango del mes actual en ISO (para consultas). */
 export function currentMonthRange(now = new Date()) {
   const start = new Date(now.getFullYear(), now.getMonth(), 1)

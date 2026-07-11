@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import DeveloperFooter from '@/components/DeveloperFooter'
 import Logo from '@/components/Logo'
 import { requestOtp, verifyOtp, type LoginState } from './actions'
 
@@ -94,6 +95,7 @@ export default function LoginPage() {
             </button>
           </form>
         )}
+        <DeveloperFooter className="mt-10" />
       </div>
     </main>
   )

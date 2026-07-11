@@ -3,11 +3,16 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCOP, formatDay, currentMonthRange } from '@/lib/format'
 import QuickEntry from '@/components/QuickEntry'
 import Logo from '@/components/Logo'
-import TransactionRow, { TX_META } from '@/components/TransactionRow'
+import TransactionRow from '@/components/TransactionRow'
+import DeveloperFooter from '@/components/DeveloperFooter'
+import { createAccountImageUrlMap, createProfileAvatarUrl } from '@/lib/account-images'
+import { categoryGroupKey, categoryLabel } from '@/lib/categories'
+import { getTransactionMeta } from '@/lib/transaction-meta'
 import type {
   AccountBalance,
   Account,
   Category,
+  Profile,
   Transaction,
   TransactionType,
 } from '@/lib/supabase/types'
@@ -22,10 +27,13 @@ export default async function DashboardPage() {
 
   const { start, end } = currentMonthRange()
 
-  const [balancesRes, accountsRes, categoriesRes, recentRes, monthRes] =
+  const [profileRes, balancesRes, accountsRes, categoriesRes, recentRes, monthRes] =
     await Promise.all([
+      user
+        ? supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
       supabase.from('account_balances').select('*'),
-      supabase.from('accounts').select('id,name,type').eq('archived', false),
+      supabase.from('accounts').select('id,name,type,image_path').eq('archived', false),
       supabase.from('categories').select('id,name,kind,parent_id'),
       supabase
         .from('transactions')
@@ -39,8 +47,12 @@ export default async function DashboardPage() {
         .lt('occurred_at', end),
     ])
 
+  const profile = profileRes.data as Profile | null
   const balances = (balancesRes.data ?? []) as AccountBalance[]
-  const accounts = (accountsRes.data ?? []) as Pick<Account, 'id' | 'name' | 'type'>[]
+  const accounts = (accountsRes.data ?? []) as Pick<
+    Account,
+    'id' | 'name' | 'type' | 'image_path'
+  >[]
   const categories = (categoriesRes.data ?? []) as Pick<
     Category,
     'id' | 'name' | 'kind' | 'parent_id'
@@ -52,7 +64,12 @@ export default async function DashboardPage() {
   >[]
 
   const accountName = new Map(accounts.map((a) => [a.id, a.name]))
+  const accountType = new Map(accounts.map((a) => [a.id, a.type]))
+  const accountImagePath = new Map(accounts.map((a) => [a.id, a.image_path]))
+  const accountImageUrl = await createAccountImageUrlMap(accounts.map((a) => a.image_path))
+  const profileAvatarUrl = await createProfileAvatarUrl(profile?.avatar_path ?? null)
   const categoryName = new Map(categories.map((c) => [c.id, c.name]))
+  const categoryParent = new Map(categories.map((c) => [c.id, c.parent_id]))
 
   const netWorth = balances.reduce((s, b) => s + Number(b.balance), 0)
   const monthIncome = month
@@ -65,7 +82,7 @@ export default async function DashboardPage() {
   const expenseByCat = new Map<string, number>()
   const incomeByCat = new Map<string, number>()
   for (const t of month) {
-    const key = t.category_id ? categoryName.get(t.category_id) ?? 'Sin categoría' : 'Sin categoría'
+    const key = categoryGroupKey(t.category_id, categoryName, categoryParent)
     if (t.type === 'expense') {
       expenseByCat.set(key, (expenseByCat.get(key) ?? 0) + Number(t.amount))
     }
@@ -77,7 +94,7 @@ export default async function DashboardPage() {
   const topIncome = toBreakdown(incomeByCat)
 
   const noData = balances.length === 0
-  const firstName = user?.email?.split('@')[0] ?? 'Nexo'
+  const firstName = profile?.full_name?.trim() || user?.email?.split('@')[0] || 'Nexo'
 
   return (
     <>
@@ -92,9 +109,14 @@ export default async function DashboardPage() {
         <Link
           href="/perfil"
           aria-label="Perfil"
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm font-semibold text-brand"
+          className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/[0.04] text-sm font-semibold text-brand"
         >
-          {firstName.charAt(0).toUpperCase()}
+          {profileAvatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profileAvatarUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            firstName.charAt(0).toUpperCase()
+          )}
         </Link>
       </header>
 
@@ -176,15 +198,16 @@ export default async function DashboardPage() {
           <SectionHeader title="Recientes" href="/movimientos" />
           <ul className="divide-y divide-white/[0.05]">
             {recent.map((t) => {
-              const meta = TX_META[t.type]
+              const meta = getTransactionMeta(t.type)
               const label =
                 t.type === 'transfer'
                   ? `${accountName.get(t.account_id) ?? ''} → ${
                       t.to_account_id ? accountName.get(t.to_account_id) ?? '' : ''
                     }`
                   : t.category_id
-                    ? categoryName.get(t.category_id) ?? meta.label
+                    ? categoryLabel(t.category_id, categoryName, categoryParent, meta.label)
                     : meta.label
+              const imagePath = accountImagePath.get(t.account_id)
               return (
                 <TransactionRow
                   key={t.id}
@@ -194,6 +217,9 @@ export default async function DashboardPage() {
                     t.occurred_at
                   )}${t.note ? ` · ${t.note}` : ''}`}
                   amount={Number(t.amount)}
+                  accountName={accountName.get(t.account_id)}
+                  accountType={accountType.get(t.account_id)}
+                  accountImageUrl={imagePath ? accountImageUrl.get(imagePath) : null}
                 />
               )
             })}
@@ -201,7 +227,7 @@ export default async function DashboardPage() {
         </>
       )}
 
-      <HomeFooter />
+      <DeveloperFooter className="mt-10" />
 
       <QuickEntry accounts={accounts} categories={categories} />
     </>
@@ -264,49 +290,6 @@ function CategoryBreakdown({
         ))}
       </div>
     </section>
-  )
-}
-
-function HomeFooter() {
-  return (
-    <footer className="mt-10 border-t border-white/[0.06] pt-6 text-center">
-      <p className="text-xs text-neutral-500">Desarrollado por Adrian Ruiz</p>
-      <div className="mt-3 flex justify-center gap-3">
-        <SocialLink href="https://github.com/adrianrrruiz" label="GitHub">
-          <path d="M12 2C6.48 2 2 6.58 2 12.24c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49v-1.9c-2.78.62-3.37-1.22-3.37-1.22-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.56 2.35 1.11 2.92.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.96c.85 0 1.71.12 2.51.35 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.9v2.81c0 .27.18.59.69.49A10.14 10.14 0 0 0 22 12.24C22 6.58 17.52 2 12 2Z" />
-        </SocialLink>
-        <SocialLink
-          href="https://www.linkedin.com/in/adrian-ruiz-33863323a/"
-          label="LinkedIn"
-        >
-          <path d="M6.94 8.86H3.8V19h3.14V8.86ZM5.37 4a1.82 1.82 0 1 0 0 3.64 1.82 1.82 0 0 0 0-3.64Zm13.82 9.3c0-3.05-1.63-4.47-3.8-4.47a3.28 3.28 0 0 0-2.96 1.63h-.04v-1.6h-3V19h3.13v-5.02c0-1.32.25-2.6 1.89-2.6 1.61 0 1.63 1.51 1.63 2.68V19h3.14v-5.7Z" />
-        </SocialLink>
-      </div>
-    </footer>
-  )
-}
-
-function SocialLink({
-  href,
-  label,
-  children,
-}: {
-  href: string
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      aria-label={label}
-      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-neutral-300 transition-colors hover:border-brand/40 hover:text-brand"
-    >
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-        {children}
-      </svg>
-    </Link>
   )
 }
 

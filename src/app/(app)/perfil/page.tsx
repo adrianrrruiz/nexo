@@ -1,5 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
+import { createProfileAvatarUrl } from '@/lib/account-images'
+import ProfileAvatarUploader from '@/components/ProfileAvatarUploader'
+import ProfileForm from '@/components/ProfileForm'
 import Logo from '@/components/Logo'
+import type { Profile } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,9 +12,16 @@ export default async function PerfilPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  const { data: profileData } = user
+    ? await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+    : { data: null }
+
+  const profile = profileData as Profile | null
+  const avatarUrl = await createProfileAvatarUrl(profile?.avatar_path ?? null)
 
   const email = user?.email ?? ''
-  const initial = email.charAt(0).toUpperCase() || 'N'
+  const displayName = profile?.full_name?.trim() || email.split('@')[0] || 'Nexo'
+  const initial = displayName.charAt(0).toUpperCase() || 'N'
   const since = user?.created_at
     ? new Date(user.created_at).toLocaleDateString('es-CO', {
         month: 'long',
@@ -26,13 +37,13 @@ export default async function PerfilPage() {
       </header>
 
       <div className="mb-6 flex flex-col items-center rounded-[28px] border border-white/[0.06] bg-white/[0.03] p-8 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-deep text-3xl font-bold text-neutral-950">
-          {initial}
-        </div>
-        <p className="mt-4 max-w-full truncate text-sm font-medium">{email}</p>
+        <ProfileAvatarUploader initial={initial} imageUrl={avatarUrl} />
+        <p className="mt-4 max-w-full truncate text-sm font-medium">{displayName}</p>
+        <p className="mt-1 max-w-full truncate text-xs text-neutral-500">{email}</p>
         {since && (
           <p className="mt-1 text-xs text-neutral-500">En Nexo desde {since}</p>
         )}
+        <ProfileForm fullName={profile?.full_name ?? ''} />
       </div>
 
       <div className="mb-6 rounded-3xl border border-white/[0.06] bg-white/[0.03] p-5">

@@ -1,5 +1,10 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createAccountImageUrlMap } from '@/lib/account-images'
 import { formatCOP } from '@/lib/format'
+import AccountAvatar from '@/components/AccountAvatar'
+import AccountImageUploader from '@/components/AccountImageUploader'
+import { EditAccountButton, NewAccountButton } from '@/components/AccountManager'
 import type { AccountBalance, AccountType } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
@@ -42,6 +47,7 @@ export default async function CuentasPage() {
   const supabase = await createClient()
   const { data } = await supabase.from('account_balances').select('*')
   const balances = (data ?? []) as AccountBalance[]
+  const imageUrls = await createAccountImageUrlMap(balances.map((b) => b.image_path))
 
   const total = balances.reduce((s, b) => s + Number(b.balance), 0)
 
@@ -55,14 +61,42 @@ export default async function CuentasPage() {
 
   return (
     <>
-      <header className="mb-6">
-        <h1 className="text-xl font-semibold">Cuentas</h1>
-        <p className="mt-0.5 text-sm text-neutral-500">
-          Total:{' '}
-          <span className="font-semibold text-brand tabular-nums">
-            {formatCOP(total)}
-          </span>
-        </p>
+      <header className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">Cuentas</h1>
+          <p className="mt-0.5 text-sm text-neutral-500">
+            Total:{' '}
+            <span className="font-semibold text-brand tabular-nums">
+              {formatCOP(total)}
+            </span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/categorias"
+            aria-label="Gestionar categorías"
+            title="Gestionar categorías"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] text-neutral-300 transition-colors hover:border-brand/40 hover:text-brand"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 7h10" />
+              <path d="M4 12h8" />
+              <path d="M4 17h10" />
+              <path d="M18 6v12" />
+              <path d="m15.5 8.5 2.5-2.5 2.5 2.5" />
+              <path d="m15.5 15.5 2.5 2.5 2.5-2.5" />
+            </svg>
+          </Link>
+          <NewAccountButton />
+        </div>
       </header>
 
       {balances.length === 0 ? (
@@ -85,39 +119,56 @@ export default async function CuentasPage() {
               </h2>
               <div className="space-y-3">
                 {list.map((b) => (
-                  <div
+                  <article
                     key={b.id}
-                    className="flex items-center gap-4 rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4"
+                    className="flex items-center gap-4 rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4 transition-colors hover:border-brand/25 hover:bg-white/[0.05]"
                   >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        {TYPE_ICON[b.type]}
-                      </svg>
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{b.name}</p>
-                      <p className="text-xs text-neutral-500">
-                        {b.type === 'credit' && b.credit_limit
-                          ? `Cupo ${formatCOP(Number(b.credit_limit))}`
-                          : b.currency}
-                      </p>
-                    </div>
-                    <p
-                      className={`text-sm font-semibold tabular-nums ${
-                        Number(b.balance) < 0 ? 'text-red-400' : 'text-neutral-100'
-                      }`}
+                    <AccountImageUploader accountId={b.id}>
+                      {b.image_path ? (
+                        <AccountAvatar
+                          name={b.name}
+                          type={b.type}
+                          imageUrl={imageUrls.get(b.image_path)}
+                        />
+                      ) : (
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            {TYPE_ICON[b.type]}
+                          </svg>
+                        </span>
+                      )}
+                    </AccountImageUploader>
+                    <Link
+                      href={`/movimientos?cuenta=${b.id}`}
+                      className="flex min-w-0 flex-1 items-center gap-3"
+                      aria-label={`Ver movimientos de ${b.name}`}
                     >
-                      {formatCOP(Number(b.balance))}
-                    </p>
-                  </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{b.name}</p>
+                        <p className="text-xs text-neutral-500">
+                          {b.type === 'credit' && b.credit_limit
+                            ? `Cupo ${formatCOP(Number(b.credit_limit))}`
+                            : b.currency}
+                        </p>
+                      </div>
+                      <p
+                        className={`shrink-0 text-sm font-semibold tabular-nums ${
+                          Number(b.balance) < 0 ? 'text-red-400' : 'text-neutral-100'
+                        }`}
+                      >
+                        {formatCOP(Number(b.balance))}
+                      </p>
+                    </Link>
+                    <EditAccountButton account={b} />
+                  </article>
                 ))}
               </div>
             </section>

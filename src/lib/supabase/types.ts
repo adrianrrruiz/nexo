@@ -8,6 +8,14 @@ export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment'
 export type TransactionSource = 'manual' | 'import' | 'email'
 export type CategoryKind = 'income' | 'expense'
 
+export type Profile = {
+  id: string
+  full_name: string | null
+  avatar_path: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type Account = {
   id: string
   user_id: string
@@ -16,6 +24,7 @@ export type Account = {
   currency: string
   initial_balance: number
   credit_limit: number | null
+  image_path: string | null
   color: string | null
   icon: string | null
   archived: boolean
@@ -58,12 +67,25 @@ export type AccountBalance = {
   type: AccountType
   currency: string
   credit_limit: number | null
+  image_path: string | null
   balance: number
 }
 
 export interface Database {
   public: {
     Tables: {
+      profiles: {
+        Row: Profile
+        Insert: {
+          id: string
+          full_name?: string | null
+          avatar_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Profile>
+        Relationships: []
+      }
       accounts: {
         Row: Account
         Insert: {
@@ -74,6 +96,7 @@ export interface Database {
           currency?: string
           initial_balance?: number
           credit_limit?: number | null
+          image_path?: string | null
           color?: string | null
           icon?: string | null
           archived?: boolean
