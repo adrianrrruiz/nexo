@@ -1,25 +1,51 @@
 'use server'
 
-import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-export type LoginState = { ok: boolean; message: string } | null
+export type LoginState = { ok: boolean; message: string; email?: string } | null
 
-/** Envía un enlace mágico (magic link) al correo. */
-export async function sendMagicLink(
+/** Paso 1: envía un código de un solo uso (OTP) al correo. */
+export async function requestOtp(
   _prev: LoginState,
   formData: FormData
 ): Promise<LoginState> {
-  const email = String(formData.get('email') ?? '').trim()
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase()
   if (!email) return { ok: false, message: 'Escribe tu correo.' }
 
-  const origin = (await headers()).get('origin') ?? ''
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${origin}/auth/callback` },
+    options: { shouldCreateUser: true },
   })
 
-  if (error) return { ok: false, message: error.message }
-  return { ok: true, message: 'Te enviamos un enlace. Revisa tu correo.' }
+  if (error) return { ok: false, message: error.message, email }
+  return { ok: true, message: 'Te enviamos un código. Revisa tu correo.', email }
+}
+
+/** Paso 2: verifica el código y crea la sesión. */
+export async function verifyOtp(
+  _prev: LoginState,
+  formData: FormData
+): Promise<LoginState> {
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase()
+  const token = String(formData.get('token') ?? '').trim()
+  if (!email) return { ok: false, message: 'Falta el correo.' }
+  if (!token) return { ok: false, message: 'Escribe el código.', email }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'email',
+  })
+
+  if (error)
+    return { ok: false, message: 'Código inválido o expirado.', email }
+
+  redirect('/dashboard')
 }

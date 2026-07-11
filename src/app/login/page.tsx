@@ -1,13 +1,28 @@
 'use client'
 
-import { useActionState } from 'react'
-import { sendMagicLink, type LoginState } from './actions'
+import { useActionState, useState } from 'react'
+import { requestOtp, verifyOtp, type LoginState } from './actions'
 
 export default function LoginPage() {
-  const [state, formAction, pending] = useActionState<LoginState, FormData>(
-    sendMagicLink,
-    null
-  )
+  const [email, setEmail] = useState('')
+  const [sent, setSent] = useState(false)
+
+  const [reqState, requestAction, reqPending] = useActionState<
+    LoginState,
+    FormData
+  >(async (prev, fd) => {
+    const res = await requestOtp(prev, fd)
+    if (res?.ok) {
+      setEmail(res.email ?? '')
+      setSent(true)
+    }
+    return res
+  }, null)
+
+  const [verState, verifyAction, verPending] = useActionState<
+    LoginState,
+    FormData
+  >(verifyOtp, null)
 
   return (
     <main className="flex-1 flex flex-col items-center justify-center px-6">
@@ -22,32 +37,61 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form action={formAction} className="space-y-3">
-          <input
-            type="email"
-            name="email"
-            required
-            autoComplete="email"
-            placeholder="tucorreo@ejemplo.com"
-            className="w-full rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3 text-base outline-none focus:border-indigo-500"
-          />
-          <button
-            type="submit"
-            disabled={pending}
-            className="w-full rounded-xl bg-indigo-600 py-3 font-medium disabled:opacity-60 active:bg-indigo-700"
-          >
-            {pending ? 'Enviando…' : 'Enviar enlace de acceso'}
-          </button>
-        </form>
-
-        {state && (
-          <p
-            className={`mt-4 text-center text-sm ${
-              state.ok ? 'text-emerald-400' : 'text-red-400'
-            }`}
-          >
-            {state.message}
-          </p>
+        {!sent ? (
+          <form action={requestAction} className="space-y-3">
+            <input
+              type="email"
+              name="email"
+              required
+              autoComplete="email"
+              placeholder="tucorreo@ejemplo.com"
+              className="w-full rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3 text-base outline-none focus:border-indigo-500"
+            />
+            <button
+              type="submit"
+              disabled={reqPending}
+              className="w-full rounded-xl bg-indigo-600 py-3 font-medium disabled:opacity-60 active:bg-indigo-700"
+            >
+              {reqPending ? 'Enviando…' : 'Enviar código'}
+            </button>
+            {reqState && !reqState.ok && (
+              <p className="text-center text-sm text-red-400">{reqState.message}</p>
+            )}
+          </form>
+        ) : (
+          <form action={verifyAction} className="space-y-3">
+            <input type="hidden" name="email" value={email} />
+            <p className="text-center text-sm text-neutral-400">
+              Código enviado a <span className="text-neutral-200">{email}</span>
+            </p>
+            <input
+              type="text"
+              name="token"
+              required
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="000000"
+              className="w-full rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3 text-center text-2xl tracking-[0.4em] outline-none focus:border-indigo-500"
+            />
+            <button
+              type="submit"
+              disabled={verPending}
+              className="w-full rounded-xl bg-indigo-600 py-3 font-medium disabled:opacity-60 active:bg-indigo-700"
+            >
+              {verPending ? 'Verificando…' : 'Entrar'}
+            </button>
+            {verState && !verState.ok && (
+              <p className="text-center text-sm text-red-400">{verState.message}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => setSent(false)}
+              className="w-full text-center text-xs text-neutral-500 underline"
+            >
+              Usar otro correo
+            </button>
+          </form>
         )}
       </div>
     </main>
