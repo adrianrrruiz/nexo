@@ -1,14 +1,29 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
-import { addTransaction, type EntryState } from '@/app/dashboard/actions'
+import { addTransaction, type EntryState } from '@/app/(app)/dashboard/actions'
 import type { Account, Category, TransactionType } from '@/lib/supabase/types'
 
-const TYPES: { value: TransactionType; label: string; color: string }[] = [
-  { value: 'expense', label: 'Gasto', color: 'bg-red-500' },
-  { value: 'income', label: 'Ingreso', color: 'bg-emerald-500' },
-  { value: 'transfer', label: 'Transferencia', color: 'bg-sky-500' },
+const TYPES: { value: TransactionType; label: string; active: string }[] = [
+  {
+    value: 'expense',
+    label: 'Gasto',
+    active: 'bg-red-500/15 border-red-500/40 text-red-400',
+  },
+  {
+    value: 'income',
+    label: 'Ingreso',
+    active: 'bg-brand/15 border-brand/40 text-brand',
+  },
+  {
+    value: 'transfer',
+    label: 'Transferencia',
+    active: 'bg-sky-500/15 border-sky-500/40 text-sky-400',
+  },
 ]
+
+const FIELD =
+  'w-full rounded-2xl border border-white/[0.06] bg-white/[0.05] px-4 py-3.5 text-base outline-none focus:border-brand/60'
 
 export default function QuickEntry({
   accounts,
@@ -42,35 +57,58 @@ export default function QuickEntry({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-20 h-14 w-14 rounded-full bg-indigo-600 text-3xl leading-none shadow-lg shadow-indigo-900/40 active:bg-indigo-700"
+        className="fixed bottom-24 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-deep text-neutral-950 shadow-lg shadow-brand/25 active:scale-95 transition-transform"
         aria-label="Nuevo movimiento"
       >
-        +
+        <svg
+          viewBox="0 0 24 24"
+          className="h-6 w-6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
       </button>
     )
   }
 
   return (
-    <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/60">
-      <div className="w-full max-w-md rounded-t-3xl bg-neutral-900 border-t border-neutral-800 p-5 pb-8">
-        <div className="mb-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-t-[28px] border-t border-white/10 bg-surface p-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/15" />
+        <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Nuevo movimiento</h2>
-          <button onClick={() => setOpen(false)} className="text-neutral-400 text-2xl">
-            ×
+          <button
+            onClick={() => setOpen(false)}
+            aria-label="Cerrar"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-neutral-400"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
           </button>
         </div>
 
         {/* selector de tipo */}
-        <div className="mb-4 grid grid-cols-3 gap-2">
+        <div className="mb-5 grid grid-cols-3 gap-2">
           {TYPES.map((t) => (
             <button
               key={t.value}
               type="button"
               onClick={() => setType(t.value)}
-              className={`rounded-xl py-2 text-sm font-medium border ${
+              className={`rounded-2xl border py-2.5 text-xs font-semibold transition-colors ${
                 type === t.value
-                  ? `${t.color} border-transparent text-white`
-                  : 'border-neutral-700 text-neutral-300'
+                  ? t.active
+                  : 'border-white/[0.08] text-neutral-400'
               }`}
             >
               {t.label}
@@ -89,15 +127,11 @@ export default function QuickEntry({
             min="1"
             required
             placeholder="Monto (COP)"
-            className="w-full rounded-xl bg-neutral-800 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-indigo-500"
+            className={`${FIELD} text-lg font-semibold`}
           />
 
           <div className="flex gap-2">
-            <select
-              name="account_id"
-              required
-              className="flex-1 rounded-xl bg-neutral-800 px-3 py-3 outline-none"
-            >
+            <select name="account_id" required className={FIELD}>
               <option value="">{type === 'transfer' ? 'Desde…' : 'Cuenta'}</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -107,11 +141,7 @@ export default function QuickEntry({
             </select>
 
             {type === 'transfer' && (
-              <select
-                name="to_account_id"
-                required
-                className="flex-1 rounded-xl bg-neutral-800 px-3 py-3 outline-none"
-              >
+              <select name="to_account_id" required className={FIELD}>
                 <option value="">Hacia…</option>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -123,10 +153,7 @@ export default function QuickEntry({
           </div>
 
           {type !== 'transfer' && (
-            <select
-              name="category_id"
-              className="w-full rounded-xl bg-neutral-800 px-3 py-3 outline-none"
-            >
+            <select name="category_id" className={FIELD}>
               <option value="">Categoría (opcional)</option>
               {cats.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -137,24 +164,19 @@ export default function QuickEntry({
             </select>
           )}
 
-          <input
-            type="date"
-            name="date"
-            defaultValue={today}
-            className="w-full rounded-xl bg-neutral-800 px-3 py-3 outline-none"
-          />
+          <input type="date" name="date" defaultValue={today} className={FIELD} />
 
           <input
             type="text"
             name="note"
             placeholder="Nota (opcional)"
-            className="w-full rounded-xl bg-neutral-800 px-4 py-3 outline-none"
+            className={FIELD}
           />
 
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-xl bg-indigo-600 py-3 font-medium disabled:opacity-60 active:bg-indigo-700"
+            className="w-full rounded-2xl bg-gradient-to-r from-brand to-brand-deep py-3.5 font-semibold text-neutral-950 disabled:opacity-60 active:opacity-90"
           >
             {pending ? 'Guardando…' : 'Guardar'}
           </button>
@@ -162,7 +184,7 @@ export default function QuickEntry({
           {state && (
             <p
               className={`text-center text-sm ${
-                state.ok ? 'text-emerald-400' : 'text-red-400'
+                state.ok ? 'text-brand' : 'text-red-400'
               }`}
             >
               {state.message}

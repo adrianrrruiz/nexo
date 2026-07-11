@@ -1,6 +1,9 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP, formatDay, currentMonthRange } from '@/lib/format'
 import QuickEntry from '@/components/QuickEntry'
+import Logo from '@/components/Logo'
+import TransactionRow, { TX_META } from '@/components/TransactionRow'
 import type {
   AccountBalance,
   Account,
@@ -9,13 +12,6 @@ import type {
 } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
-
-const TYPE_META: Record<string, { sign: string; color: string; label: string }> = {
-  income: { sign: '+', color: 'text-emerald-400', label: 'Ingreso' },
-  expense: { sign: '−', color: 'text-red-400', label: 'Gasto' },
-  transfer: { sign: '', color: 'text-sky-400', label: 'Transferencia' },
-  adjustment: { sign: '', color: 'text-amber-400', label: 'Ajuste' },
-}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -34,7 +30,7 @@ export default async function DashboardPage() {
         .from('transactions')
         .select('*')
         .order('occurred_at', { ascending: false })
-        .limit(25),
+        .limit(8),
       supabase
         .from('transactions')
         .select('amount,type,category_id')
@@ -72,31 +68,48 @@ export default async function DashboardPage() {
     const key = t.category_id ? categoryName.get(t.category_id) ?? 'Sin categoría' : 'Sin categoría'
     spendByCat.set(key, (spendByCat.get(key) ?? 0) + Number(t.amount))
   }
-  const topSpend = [...spendByCat.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
+  const topSpend = [...spendByCat.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
   const maxSpend = topSpend[0]?.[1] ?? 1
 
   const noData = balances.length === 0
+  const firstName = user?.email?.split('@')[0] ?? 'Nexo'
 
   return (
-    <main className="flex-1 px-4 pb-28 pt-4 max-w-md mx-auto w-full">
-      <header className="mb-5 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-neutral-500">Hola{user?.email ? ',' : ''}</p>
-          <h1 className="text-lg font-semibold">{user?.email ?? 'Nexo'}</h1>
+    <>
+      <header className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Logo className="h-9 w-9" id="nexo-logo-dash" />
+          <div>
+            <p className="text-xs text-neutral-500">Hola,</p>
+            <h1 className="text-base font-semibold leading-tight">{firstName}</h1>
+          </div>
         </div>
-        <form action="/auth/signout" method="post">
-          <button className="text-xs text-neutral-400 underline">Salir</button>
-        </form>
+        <Link
+          href="/perfil"
+          aria-label="Perfil"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm font-semibold text-brand"
+        >
+          {firstName.charAt(0).toUpperCase()}
+        </Link>
       </header>
 
       {/* Patrimonio neto */}
-      <section className="mb-5 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-5">
-        <p className="text-xs text-indigo-100">Patrimonio neto</p>
-        <p className="mt-1 text-3xl font-bold tracking-tight">{formatCOP(netWorth)}</p>
-        <div className="mt-4 flex gap-4 text-sm">
-          <span className="text-emerald-200">↑ {formatCOP(monthIncome)}</span>
-          <span className="text-red-200">↓ {formatCOP(monthExpense)}</span>
-          <span className="ml-auto text-indigo-100">este mes</span>
+      <section className="relative mb-6 overflow-hidden rounded-[28px] bg-gradient-to-br from-brand to-brand-deep p-6">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-white/15 blur-2xl" />
+        <p className="text-xs font-medium uppercase tracking-wider text-emerald-950/60">
+          Patrimonio neto
+        </p>
+        <p className="mt-1.5 text-4xl font-bold tracking-tight text-neutral-950">
+          {formatCOP(netWorth)}
+        </p>
+        <div className="mt-5 flex items-center gap-2 text-xs font-semibold">
+          <span className="rounded-full bg-black/15 px-3 py-1.5 text-emerald-950">
+            ↑ {formatCOP(monthIncome)}
+          </span>
+          <span className="rounded-full bg-black/15 px-3 py-1.5 text-red-950">
+            ↓ {formatCOP(monthExpense)}
+          </span>
+          <span className="ml-auto text-emerald-950/60">este mes</span>
         </div>
       </section>
 
@@ -105,22 +118,22 @@ export default async function DashboardPage() {
       ) : (
         <>
           {/* Cuentas */}
-          <SectionTitle>Cuentas</SectionTitle>
-          <div className="mb-6 flex gap-3 overflow-x-auto no-scrollbar pb-1">
+          <SectionHeader title="Cuentas" href="/cuentas" />
+          <div className="no-scrollbar mb-7 flex gap-3 overflow-x-auto pb-1">
             {balances.map((b) => (
               <div
                 key={b.id}
-                className="min-w-[140px] rounded-2xl bg-neutral-900 border border-neutral-800 p-4"
+                className="min-w-[148px] rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4"
               >
-                <p className="truncate text-sm text-neutral-400">{b.name}</p>
+                <p className="truncate text-xs text-neutral-400">{b.name}</p>
                 <p
-                  className={`mt-1 font-semibold ${
-                    Number(b.balance) < 0 ? 'text-red-400' : ''
+                  className={`mt-1.5 text-sm font-semibold tabular-nums ${
+                    Number(b.balance) < 0 ? 'text-red-400' : 'text-neutral-100'
                   }`}
                 >
                   {formatCOP(Number(b.balance))}
                 </p>
-                <p className="mt-1 text-[10px] uppercase tracking-wide text-neutral-600">
+                <p className="mt-2 inline-block rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
                   {b.type}
                 </p>
               </div>
@@ -130,17 +143,19 @@ export default async function DashboardPage() {
           {/* Gasto por categoría */}
           {topSpend.length > 0 && (
             <>
-              <SectionTitle>Gasto del mes por categoría</SectionTitle>
-              <div className="mb-6 space-y-2">
+              <SectionHeader title="Gasto del mes" />
+              <div className="mb-7 space-y-3 rounded-3xl border border-white/[0.06] bg-white/[0.03] p-5">
                 {topSpend.map(([name, amount]) => (
                   <div key={name}>
                     <div className="flex justify-between text-sm">
                       <span className="text-neutral-300">{name}</span>
-                      <span className="text-neutral-400">{formatCOP(amount)}</span>
+                      <span className="tabular-nums text-neutral-500">
+                        {formatCOP(amount)}
+                      </span>
                     </div>
-                    <div className="mt-1 h-1.5 rounded-full bg-neutral-800">
+                    <div className="mt-1.5 h-1.5 rounded-full bg-white/[0.06]">
                       <div
-                        className="h-full rounded-full bg-indigo-500"
+                        className="h-full rounded-full bg-gradient-to-r from-brand to-brand-deep"
                         style={{ width: `${(amount / maxSpend) * 100}%` }}
                       />
                     </div>
@@ -151,10 +166,10 @@ export default async function DashboardPage() {
           )}
 
           {/* Movimientos recientes */}
-          <SectionTitle>Movimientos recientes</SectionTitle>
-          <ul className="divide-y divide-neutral-900">
+          <SectionHeader title="Recientes" href="/movimientos" />
+          <ul className="divide-y divide-white/[0.05]">
             {recent.map((t) => {
-              const meta = TYPE_META[t.type]
+              const meta = TX_META[t.type]
               const label =
                 t.type === 'transfer'
                   ? `${accountName.get(t.account_id) ?? ''} → ${
@@ -164,19 +179,15 @@ export default async function DashboardPage() {
                     ? categoryName.get(t.category_id) ?? meta.label
                     : meta.label
               return (
-                <li key={t.id} className="flex items-center gap-3 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm">{label}</p>
-                    <p className="truncate text-xs text-neutral-500">
-                      {accountName.get(t.account_id)} · {formatDay(t.occurred_at)}
-                      {t.note ? ` · ${t.note}` : ''}
-                    </p>
-                  </div>
-                  <span className={`text-sm font-medium ${meta.color}`}>
-                    {meta.sign}
-                    {formatCOP(Number(t.amount))}
-                  </span>
-                </li>
+                <TransactionRow
+                  key={t.id}
+                  type={t.type}
+                  label={label}
+                  sublabel={`${accountName.get(t.account_id) ?? ''} · ${formatDay(
+                    t.occurred_at
+                  )}${t.note ? ` · ${t.note}` : ''}`}
+                  amount={Number(t.amount)}
+                />
               )
             })}
           </ul>
@@ -184,26 +195,34 @@ export default async function DashboardPage() {
       )}
 
       <QuickEntry accounts={accounts} categories={categories} />
-    </main>
+    </>
   )
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function SectionHeader({ title, href }: { title: string; href?: string }) {
   return (
-    <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
-      {children}
-    </h2>
+    <div className="mb-3 flex items-baseline justify-between">
+      <h2 className="text-sm font-semibold text-neutral-200">{title}</h2>
+      {href && (
+        <Link href={href} className="text-xs font-medium text-brand">
+          Ver todo
+        </Link>
+      )}
+    </div>
   )
 }
 
 function EmptyState() {
   return (
-    <div className="rounded-2xl border border-dashed border-neutral-800 p-8 text-center">
-      <p className="text-neutral-400">Aún no hay datos.</p>
+    <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center">
+      <p className="text-neutral-300">Aún no hay datos.</p>
       <p className="mt-2 text-sm text-neutral-500">
         Importa tu historial con{' '}
-        <code className="rounded bg-neutral-800 px-1">npm run import</code> o toca el
-        botón <span className="text-indigo-400">+</span> para tu primer movimiento.
+        <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-neutral-300">
+          npm run import
+        </code>{' '}
+        o toca el botón <span className="font-semibold text-brand">+</span> para tu
+        primer movimiento.
       </p>
     </div>
   )

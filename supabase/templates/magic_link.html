@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
+    <title>Tu código de acceso a Nexo</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#050807;">
+    <!-- preheader oculto: se ve en la vista previa de la bandeja -->
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
+      Tu código de acceso a Nexo: {{ .Token }}
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#050807;">
+      <tr>
+        <td align="center" style="padding:48px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:420px;">
+
+            <!-- logo -->
+            <tr>
+              <td align="center" style="padding-bottom:28px;">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="center" style="width:56px;height:56px;border-radius:16px;background-color:#101513;background-image:linear-gradient(135deg,#1DCD9F,#169976);font-family:Arial,Helvetica,sans-serif;font-size:30px;font-weight:bold;color:#050807;">
+                      N
+                    </td>
+                  </tr>
+                </table>
+                <div style="font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;color:#ffffff;padding-top:14px;">
+                  Nexo
+                </div>
+                <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:1px;color:#8a938f;padding-top:4px;">
+                  CLARIDAD &middot; CONTROL &middot; <span style="color:#1DCD9F;">CRECIMIENTO</span>
+                </div>
+              </td>
+            </tr>
+
+            <!-- tarjeta -->
+            <tr>
+              <td style="background-color:#101513;border:1px solid #1e2622;border-radius:24px;padding:36px 32px;" align="center">
+                <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#ffffff;">
+                  Tu código de acceso
+                </div>
+                <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#8a938f;padding-top:8px;">
+                  Escribe este código en la app para entrar a tu cuenta.
+                </div>
+
+                <!-- código OTP -->
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto;">
+                  <tr>
+                    <td align="center" style="background-color:#0a1310;border:1px solid #1DCD9F;border-radius:16px;padding:18px 28px;">
+                      <span style="font-family:'Courier New',Courier,monospace;font-size:34px;font-weight:bold;letter-spacing:10px;color:#1DCD9F;">{{ .Token }}</span>
+                    </td>
+                  </tr>
+                </table>
+
+                <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#8a938f;">
+                  El código es válido por 60 minutos y solo funciona una vez.
+                </div>
+              </td>
+            </tr>
+
+            <!-- pie -->
+            <tr>
+              <td align="center" style="padding-top:24px;">
+                <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#5c6561;">
+                  Si no solicitaste este código, puedes ignorar este correo.<br />
+                  Nadie puede entrar a tu cuenta sin él.
+                </div>
+                <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#3d4441;padding-top:16px;">
+                  Nexo &mdash; tus finanzas personales, con el control de tus datos.
+                </div>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

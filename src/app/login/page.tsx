@@ -1,7 +1,14 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import Logo from '@/components/Logo'
 import { requestOtp, verifyOtp, type LoginState } from './actions'
+
+const FIELD =
+  'w-full rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3.5 text-base outline-none transition-colors focus:border-brand/60'
+
+const PRIMARY =
+  'w-full rounded-2xl bg-gradient-to-r from-brand to-brand-deep py-3.5 font-semibold text-neutral-950 shadow-lg shadow-brand/20 disabled:opacity-60 active:opacity-90'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -25,15 +32,17 @@ export default function LoginPage() {
   >(verifyOtp, null)
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center px-6">
+    <main className="flex flex-1 flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-2xl font-bold">
-            N
+        <div className="mb-10 text-center">
+          <div className="relative mx-auto mb-5 w-fit">
+            {/* glow detrás del logo */}
+            <div className="absolute inset-0 scale-150 rounded-full bg-brand/20 blur-2xl" />
+            <Logo className="relative h-16 w-16" id="nexo-logo-login" />
           </div>
-          <h1 className="text-2xl font-semibold">Nexo</h1>
-          <p className="mt-1 text-sm text-neutral-400">
-            Tus finanzas personales, con el control de tus datos.
+          <h1 className="text-3xl font-bold tracking-tight">Nexo</h1>
+          <p className="mt-2 text-sm text-neutral-400">
+            Claridad. Control. Crecimiento.
           </p>
         </div>
 
@@ -45,13 +54,9 @@ export default function LoginPage() {
               required
               autoComplete="email"
               placeholder="tucorreo@ejemplo.com"
-              className="w-full rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3 text-base outline-none focus:border-indigo-500"
+              className={FIELD}
             />
-            <button
-              type="submit"
-              disabled={reqPending}
-              className="w-full rounded-xl bg-indigo-600 py-3 font-medium disabled:opacity-60 active:bg-indigo-700"
-            >
+            <button type="submit" disabled={reqPending} className={PRIMARY}>
               {reqPending ? 'Enviando…' : 'Enviar código'}
             </button>
             {reqState && !reqState.ok && (
@@ -62,7 +67,7 @@ export default function LoginPage() {
           <form action={verifyAction} className="space-y-3">
             <input type="hidden" name="email" value={email} />
             <p className="text-center text-sm text-neutral-400">
-              Código enviado a <span className="text-neutral-200">{email}</span>
+              Código enviado a <span className="text-neutral-100">{email}</span>
             </p>
             <input
               type="text"
@@ -70,15 +75,11 @@ export default function LoginPage() {
               required
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={6}
-              placeholder="000000"
-              className="w-full rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3 text-center text-2xl tracking-[0.4em] outline-none focus:border-indigo-500"
+              maxLength={8}
+              placeholder="00000000"
+              className={`${FIELD} text-center text-2xl font-semibold tracking-[0.3em]`}
             />
-            <button
-              type="submit"
-              disabled={verPending}
-              className="w-full rounded-xl bg-indigo-600 py-3 font-medium disabled:opacity-60 active:bg-indigo-700"
-            >
+            <button type="submit" disabled={verPending} className={PRIMARY}>
               {verPending ? 'Verificando…' : 'Entrar'}
             </button>
             {verState && !verState.ok && (
@@ -87,7 +88,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setSent(false)}
-              className="w-full text-center text-xs text-neutral-500 underline"
+              className="w-full text-center text-xs text-neutral-500 underline underline-offset-2"
             >
               Usar otro correo
             </button>

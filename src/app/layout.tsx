@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#6366f1',
+  themeColor: '#050807',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -38,7 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es-CO" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-neutral-950 text-neutral-100">
+      <body className="min-h-full flex flex-col text-neutral-100">
         {children}
         <ServiceWorkerRegister />
       </body>
