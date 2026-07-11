@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react'
 import { addTransaction, type EntryState } from '@/app/(app)/dashboard/actions'
+import { formatCOPFromCents } from '@/lib/format'
 import type { Account, Category, TransactionType } from '@/lib/supabase/types'
 
 const TYPES: { value: TransactionType; label: string; active: string }[] = [
@@ -34,6 +35,7 @@ export default function QuickEntry({
 }) {
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<TransactionType>('expense')
+  const [amountCents, setAmountCents] = useState('')
   const [state, formAction, pending] = useActionState<EntryState, FormData>(
     addTransaction,
     null
@@ -56,7 +58,10 @@ export default function QuickEntry({
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setAmountCents('')
+          setOpen(true)
+        }}
         className="fixed bottom-24 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-deep text-neutral-950 shadow-lg shadow-brand/25 active:scale-95 transition-transform"
         aria-label="Nuevo movimiento"
       >
@@ -81,7 +86,10 @@ export default function QuickEntry({
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Nuevo movimiento</h2>
           <button
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setAmountCents('')
+              setOpen(false)
+            }}
             aria-label="Cerrar"
             className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-neutral-400"
           >
@@ -118,15 +126,47 @@ export default function QuickEntry({
 
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="type" value={type} />
+          <input
+            type="hidden"
+            name="amount"
+            value={amountCents ? (Number(amountCents) / 100).toFixed(2) : ''}
+          />
 
           <input
-            type="number"
-            name="amount"
-            inputMode="decimal"
-            step="1"
-            min="1"
+            type="text"
+            inputMode="numeric"
             required
-            placeholder="Monto (COP)"
+            placeholder="$ 0,00"
+            value={amountCents ? formatCOPFromCents(amountCents) : ''}
+            onKeyDown={(event) => {
+              if (/^\d$/.test(event.key)) {
+                event.preventDefault()
+                const hasSelection =
+                  event.currentTarget.selectionStart !== event.currentTarget.selectionEnd
+                setAmountCents((current) =>
+                  `${hasSelection ? '' : current}${event.key}`.replace(/^0+(?=\d)/, '')
+                )
+                return
+              }
+              if (event.key === 'Backspace' || event.key === 'Delete') {
+                event.preventDefault()
+                const hasSelection =
+                  event.currentTarget.selectionStart !== event.currentTarget.selectionEnd
+                setAmountCents((current) => (hasSelection ? '' : current.slice(0, -1)))
+              }
+            }}
+            onChange={(event) => {
+              const digits = event.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '')
+              setAmountCents(digits)
+            }}
+            onPaste={(event) => {
+              event.preventDefault()
+              const digits = event.clipboardData
+                .getData('text')
+                .replace(/\D/g, '')
+                .replace(/^0+(?=\d)/, '')
+              setAmountCents(digits)
+            }}
             className={`${FIELD} text-lg font-semibold`}
           />
 

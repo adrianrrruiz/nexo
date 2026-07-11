@@ -104,7 +104,11 @@ export default async function CuentasPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{b.name}</p>
-                      <p className="text-xs text-neutral-500">{b.currency}</p>
+                      <p className="text-xs text-neutral-500">
+                        {b.type === 'credit' && b.credit_limit
+                          ? `Cupo ${formatCOP(Number(b.credit_limit))}`
+                          : b.currency}
+                      </p>
                     </div>
                     <p
                       className={`text-sm font-semibold tabular-nums ${

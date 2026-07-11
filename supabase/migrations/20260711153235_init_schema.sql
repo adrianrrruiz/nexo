@@ -42,6 +42,7 @@ create table accounts (
   type            account_type not null default 'debit',
   currency        text not null default 'COP',
   initial_balance numeric(18, 2) not null default 0,
+  credit_limit    numeric(18, 2),
   color           text,
   icon            text,
   archived        boolean not null default false,
@@ -137,6 +138,7 @@ select
   a.name,
   a.type,
   a.currency,
+  a.credit_limit,
   a.initial_balance
     + coalesce(sum(t.amount) filter (where t.type = 'income'     and t.account_id = a.id), 0)
     - coalesce(sum(t.amount) filter (where t.type = 'expense'    and t.account_id = a.id), 0)

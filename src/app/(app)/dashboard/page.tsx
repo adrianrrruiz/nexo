@@ -9,6 +9,7 @@ import type {
   Account,
   Category,
   Transaction,
+  TransactionType,
 } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
@@ -61,15 +62,19 @@ export default async function DashboardPage() {
     .filter((t) => t.type === 'expense')
     .reduce((s, t) => s + Number(t.amount), 0)
 
-  // gasto del mes por categoría
-  const spendByCat = new Map<string, number>()
+  const expenseByCat = new Map<string, number>()
+  const incomeByCat = new Map<string, number>()
   for (const t of month) {
-    if (t.type !== 'expense') continue
     const key = t.category_id ? categoryName.get(t.category_id) ?? 'Sin categoría' : 'Sin categoría'
-    spendByCat.set(key, (spendByCat.get(key) ?? 0) + Number(t.amount))
+    if (t.type === 'expense') {
+      expenseByCat.set(key, (expenseByCat.get(key) ?? 0) + Number(t.amount))
+    }
+    if (t.type === 'income') {
+      incomeByCat.set(key, (incomeByCat.get(key) ?? 0) + Number(t.amount))
+    }
   }
-  const topSpend = [...spendByCat.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
-  const maxSpend = topSpend[0]?.[1] ?? 1
+  const topExpense = toBreakdown(expenseByCat)
+  const topIncome = toBreakdown(incomeByCat)
 
   const noData = balances.length === 0
   const firstName = user?.email?.split('@')[0] ?? 'Nexo'
@@ -136,31 +141,33 @@ export default async function DashboardPage() {
                 <p className="mt-2 inline-block rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
                   {b.type}
                 </p>
+                {b.type === 'credit' && b.credit_limit && (
+                  <p className="mt-2 text-[11px] text-neutral-500">
+                    Cupo:{' '}
+                    <span className="tabular-nums">
+                      {formatCOP(Number(b.credit_limit))}
+                    </span>
+                  </p>
+                )}
               </div>
             ))}
           </div>
 
-          {/* Gasto por categoría */}
-          {topSpend.length > 0 && (
+          {/* Análisis del mes */}
+          {(topExpense.length > 0 || topIncome.length > 0) && (
             <>
-              <SectionHeader title="Gasto del mes" />
-              <div className="mb-7 space-y-3 rounded-3xl border border-white/[0.06] bg-white/[0.03] p-5">
-                {topSpend.map(([name, amount]) => (
-                  <div key={name}>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-neutral-300">{name}</span>
-                      <span className="tabular-nums text-neutral-500">
-                        {formatCOP(amount)}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-white/[0.06]">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-brand to-brand-deep"
-                        style={{ width: `${(amount / maxSpend) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+              <SectionHeader title="Análisis del mes" />
+              <div className="mb-7 space-y-3">
+                <CategoryBreakdown
+                  title="Gastos por categoría"
+                  items={topExpense}
+                  type="expense"
+                />
+                <CategoryBreakdown
+                  title="Ingresos por categoría"
+                  items={topIncome}
+                  type="income"
+                />
               </div>
             </>
           )}
@@ -194,8 +201,112 @@ export default async function DashboardPage() {
         </>
       )}
 
+      <HomeFooter />
+
       <QuickEntry accounts={accounts} categories={categories} />
     </>
+  )
+}
+
+type BreakdownItem = {
+  name: string
+  amount: number
+  percent: number
+}
+
+function toBreakdown(source: Map<string, number>): BreakdownItem[] {
+  const items = [...source.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, amount]) => ({ name, amount }))
+  const total = items.reduce((sum, item) => sum + item.amount, 0)
+  return items.slice(0, 7).map((item) => ({
+    ...item,
+    percent: total > 0 ? (item.amount / total) * 100 : 0,
+  }))
+}
+
+function CategoryBreakdown({
+  title,
+  items,
+  type,
+}: {
+  title: string
+  items: BreakdownItem[]
+  type: Extract<TransactionType, 'income' | 'expense'>
+}) {
+  if (items.length === 0) return null
+  const total = items.reduce((sum, item) => sum + item.amount, 0)
+  const color = type === 'income' ? 'bg-brand' : 'bg-red-400'
+  return (
+    <section className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-5">
+      <div className="mb-4 flex items-baseline justify-between gap-3">
+        <h3 className="text-sm font-semibold text-neutral-200">{title}</h3>
+        <span className="shrink-0 text-xs font-semibold tabular-nums text-neutral-400">
+          {formatCOP(total)}
+        </span>
+      </div>
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div key={item.name}>
+            <div className="flex justify-between gap-3 text-sm">
+              <span className="truncate text-neutral-300">{item.name}</span>
+              <span className="shrink-0 tabular-nums text-neutral-500">
+                {formatCOP(item.amount)}
+              </span>
+            </div>
+            <div className="mt-1.5 h-2 rounded-full bg-white/[0.06]">
+              <div
+                className={`h-full rounded-full ${color}`}
+                style={{ width: `${Math.max(item.percent, 3)}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function HomeFooter() {
+  return (
+    <footer className="mt-10 border-t border-white/[0.06] pt-6 text-center">
+      <p className="text-xs text-neutral-500">Desarrollado por Adrian Ruiz</p>
+      <div className="mt-3 flex justify-center gap-3">
+        <SocialLink href="https://github.com/adrianrrruiz" label="GitHub">
+          <path d="M12 2C6.48 2 2 6.58 2 12.24c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49v-1.9c-2.78.62-3.37-1.22-3.37-1.22-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.56 2.35 1.11 2.92.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.96c.85 0 1.71.12 2.51.35 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.9v2.81c0 .27.18.59.69.49A10.14 10.14 0 0 0 22 12.24C22 6.58 17.52 2 12 2Z" />
+        </SocialLink>
+        <SocialLink
+          href="https://www.linkedin.com/in/adrian-ruiz-33863323a/"
+          label="LinkedIn"
+        >
+          <path d="M6.94 8.86H3.8V19h3.14V8.86ZM5.37 4a1.82 1.82 0 1 0 0 3.64 1.82 1.82 0 0 0 0-3.64Zm13.82 9.3c0-3.05-1.63-4.47-3.8-4.47a3.28 3.28 0 0 0-2.96 1.63h-.04v-1.6h-3V19h3.13v-5.02c0-1.32.25-2.6 1.89-2.6 1.61 0 1.63 1.51 1.63 2.68V19h3.14v-5.7Z" />
+        </SocialLink>
+      </div>
+    </footer>
+  )
+}
+
+function SocialLink({
+  href,
+  label,
+  children,
+}: {
+  href: string
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <Link
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-neutral-300 transition-colors hover:border-brand/40 hover:text-brand"
+    >
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+        {children}
+      </svg>
+    </Link>
   )
 }
 

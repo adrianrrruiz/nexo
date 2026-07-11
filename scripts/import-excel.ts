@@ -25,10 +25,14 @@ import * as XLSX from 'xlsx'
 // ---------------------------------------------------------------------------
 const ACCOUNT_TYPES: Record<string, 'debit' | 'savings' | 'credit' | 'cash'> = {
   'Rappi Crédito': 'credit',
-  'La primera - Nu': 'savings',
+  'La primera - Nu': 'credit',
   Nu: 'debit',
   Nequi: 'debit',
   Rappi: 'debit',
+}
+const CREDIT_LIMITS: Record<string, number> = {
+  'La primera - Nu': 1000000,
+  'Rappi Crédito': 4100000,
 }
 const DEFAULT_ACCOUNT_TYPE = 'debit' as const
 
@@ -177,6 +181,7 @@ function deriveCatalogs(txs: ParsedTx[]) {
     accounts: [...accounts].map((name) => ({
       name,
       type: ACCOUNT_TYPES[name] ?? DEFAULT_ACCOUNT_TYPE,
+      credit_limit: CREDIT_LIMITS[name] ?? null,
     })),
     categories,
   }
@@ -251,7 +256,12 @@ async function loadToSupabase(
   const { data: accRows, error: accErr } = await db
     .from('accounts')
     .upsert(
-      catalogs.accounts.map((a) => ({ user_id: userId, name: a.name, type: a.type })),
+      catalogs.accounts.map((a) => ({
+        user_id: userId,
+        name: a.name,
+        type: a.type,
+        credit_limit: a.credit_limit,
+      })),
       { onConflict: 'user_id,name' }
     )
     .select('id,name')

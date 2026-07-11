@@ -18,7 +18,7 @@ export async function addTransaction(
   if (!user) return { ok: false, message: 'Sesión expirada.' }
 
   const type = String(formData.get('type')) as TransactionType
-  const amount = Number(formData.get('amount'))
+  const amount = Number(String(formData.get('amount') || '').replace(',', '.'))
   const account_id = String(formData.get('account_id') || '')
   const rawTo = String(formData.get('to_account_id') || '')
   const rawCat = String(formData.get('category_id') || '')
@@ -52,5 +52,7 @@ export async function addTransaction(
   if (error) return { ok: false, message: error.message }
 
   revalidatePath('/dashboard')
+  revalidatePath('/movimientos')
+  revalidatePath('/cuentas')
   return { ok: true, message: 'Movimiento registrado.' }
 }

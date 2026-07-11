@@ -15,6 +15,7 @@ export type Account = {
   type: AccountType
   currency: string
   initial_balance: number
+  credit_limit: number | null
   color: string | null
   icon: string | null
   archived: boolean
@@ -56,6 +57,7 @@ export type AccountBalance = {
   name: string
   type: AccountType
   currency: string
+  credit_limit: number | null
   balance: number
 }
 
@@ -71,6 +73,7 @@ export interface Database {
           type?: AccountType
           currency?: string
           initial_balance?: number
+          credit_limit?: number | null
           color?: string | null
           icon?: string | null
           archived?: boolean

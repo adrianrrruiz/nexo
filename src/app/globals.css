@@ -16,12 +16,20 @@ html {
 
 body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  /* fondo casi negro con un brillo verde muy sutil arriba */
-  background:
-    radial-gradient(70% 38% at 50% 0%, rgba(29, 205, 159, 0.09), transparent 70%),
-    #050807;
+  background: #050807;
   /* respeta el notch en la PWA instalada */
   padding-top: env(safe-area-inset-top);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 44% at 50% 0%, rgba(29, 205, 159, 0.1), transparent 72%),
+    linear-gradient(180deg, rgba(5, 8, 7, 0) 0%, #050807 72%);
 }
 
 /* oculta la barra de scroll horizontal en los chips */
