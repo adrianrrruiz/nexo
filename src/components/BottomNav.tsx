@@ -49,8 +49,11 @@ export default function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-center px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-      <div className="flex w-fit items-center justify-center gap-1 rounded-full border border-white/10 bg-neutral-950/75 px-2 py-2 shadow-2xl shadow-black/60 backdrop-blur-xl">
+    <nav className="fixed inset-x-0 bottom-4 z-20 flex justify-center px-6">
+      <div className="relative flex w-fit items-center justify-center gap-1 overflow-hidden rounded-full border border-white/20 bg-white/[0.08] px-2 py-2 shadow-[0_18px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150">
+        <div className="pointer-events-none absolute inset-x-3 top-0 h-px bg-white/35" />
+        <div className="pointer-events-none absolute -left-8 top-0 h-16 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-8 bottom-0 h-16 w-24 rounded-full bg-brand/10 blur-2xl" />
         {ITEMS.map((item) => {
           const active = pathname.startsWith(item.href)
           return (
@@ -58,8 +61,10 @@ export default function BottomNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? 'page' : undefined}
-              className={`flex min-w-0 flex-col items-center gap-0.5 rounded-full px-3 py-1.5 transition-colors ${
-                active ? 'bg-brand/10 text-brand' : 'text-neutral-500'
+              className={`relative flex min-w-0 flex-col items-center gap-0.5 rounded-full px-3 py-1.5 transition-colors ${
+                active
+                  ? 'bg-white/[0.13] text-brand shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]'
+                  : 'text-neutral-400 hover:text-neutral-100'
               }`}
             >
               <svg
