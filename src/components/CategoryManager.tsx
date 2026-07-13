@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from 'react'
 import {
   createCategory,
+  createCategoryFromSuggestion,
   deleteCategory,
   updateCategory,
   type CategoryState,
@@ -12,8 +13,16 @@ import type { Category, CategoryKind } from '@/lib/supabase/types'
 const FIELD =
   'w-full rounded-2xl border border-white/[0.06] bg-white/[0.05] px-4 py-3.5 text-base outline-none focus:border-brand/60'
 
-export function NewCategoryButton({ categories }: { categories: Category[] }) {
-  return <CategoryForm mode="create" categories={categories} />
+type CategorySuggestion = Pick<Category, 'id' | 'name' | 'kind' | 'color' | 'icon'>
+
+export function NewCategoryButton({
+  categories,
+  suggestions = [],
+}: {
+  categories: Category[]
+  suggestions?: CategorySuggestion[]
+}) {
+  return <CategoryForm mode="create" categories={categories} suggestions={suggestions} />
 }
 
 export function EditCategoryButton({
@@ -26,14 +35,83 @@ export function EditCategoryButton({
   return <CategoryForm mode="edit" category={category} categories={categories} />
 }
 
+export function CategorySuggestionGrid({
+  categories,
+  suggestions,
+  kind,
+  showKind = false,
+}: {
+  categories: Category[]
+  suggestions: CategorySuggestion[]
+  kind?: CategoryKind
+  showKind?: boolean
+}) {
+  const [suggestionState, suggestionAction, addingSuggestion] = useActionState<
+    CategoryState,
+    FormData
+  >(createCategoryFromSuggestion, null)
+  const existingRootNames = getExistingRootNames(categories)
+  const visibleSuggestions = suggestions.filter(
+    (item) =>
+      (!kind || item.kind === kind) &&
+      !existingRootNames.has(`${item.kind}:${item.name.trim().toLocaleLowerCase('es')}`)
+  )
+
+  if (visibleSuggestions.length === 0) return null
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-2">
+        {visibleSuggestions.map((suggestion) => (
+          <form key={suggestion.id} action={suggestionAction}>
+            <input type="hidden" name="suggestion_id" value={suggestion.id} />
+            <button
+              type="submit"
+              disabled={addingSuggestion}
+              className="flex min-h-12 w-full items-center gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.04] px-3 py-2 text-left text-sm font-medium text-neutral-200 transition-colors hover:border-brand/40 hover:bg-brand/10 disabled:opacity-60"
+            >
+              {suggestion.icon && <span className="text-base">{suggestion.icon}</span>}
+              <span className="min-w-0 flex-1 truncate">{suggestion.name}</span>
+              {showKind && (
+                <span className="shrink-0 text-[11px] font-medium text-neutral-500">
+                  {suggestion.kind === 'expense' ? 'Gasto' : 'Ingreso'}
+                </span>
+              )}
+            </button>
+          </form>
+        ))}
+      </div>
+      {suggestionState && (
+        <p
+          className={`mt-3 text-center text-sm ${
+            suggestionState.ok ? 'text-brand' : 'text-red-400'
+          }`}
+        >
+          {suggestionState.message}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function getExistingRootNames(categories: Category[]) {
+  return new Set(
+    categories
+      .filter((item) => !item.parent_id)
+      .map((item) => `${item.kind}:${item.name.trim().toLocaleLowerCase('es')}`)
+  )
+}
+
 function CategoryForm({
   mode,
   category,
   categories,
+  suggestions = [],
 }: {
   mode: 'create' | 'edit'
   category?: Category
   categories: Category[]
+  suggestions?: CategorySuggestion[]
 }) {
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<CategoryKind>(category?.kind ?? 'expense')
@@ -45,7 +123,6 @@ function CategoryForm({
     deleteCategory,
     null
   )
-
   useEffect(() => {
     if (state?.ok || deleteState?.ok) {
       const t = setTimeout(() => setOpen(false), 600)
@@ -55,6 +132,12 @@ function CategoryForm({
 
   const parentOptions = categories.filter(
     (item) => !item.parent_id && item.kind === kind && item.id !== category?.id
+  )
+  const existingRootNames = getExistingRootNames(categories)
+  const visibleSuggestions = suggestions.filter(
+    (item) =>
+      item.kind === kind &&
+      !existingRootNames.has(`${item.kind}:${item.name.trim().toLocaleLowerCase('es')}`)
   )
 
   return (
@@ -140,6 +223,19 @@ function CategoryForm({
                 </p>
               )}
             </form>
+
+            {mode === 'create' && visibleSuggestions.length > 0 && (
+              <div className="mt-5 border-t border-white/[0.06] pt-5">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                  Sugeridas
+                </p>
+                <CategorySuggestionGrid
+                  categories={categories}
+                  suggestions={suggestions}
+                  kind={kind}
+                />
+              </div>
+            )}
 
             {category && (
               <form

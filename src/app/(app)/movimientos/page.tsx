@@ -16,6 +16,9 @@ export default async function MovimientosPage({
   searchParams: Promise<{ cuenta?: string }>
 }) {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   const { cuenta } = await searchParams
   const selectedAccountId = cuenta ?? ''
 
@@ -33,7 +36,9 @@ export default async function MovimientosPage({
 
   const [accountsRes, categoriesRes, txRes] = await Promise.all([
     supabase.from('accounts').select('id,name,type,image_path').eq('archived', false),
-    supabase.from('categories').select('id,name,kind,parent_id'),
+    user
+      ? supabase.from('categories').select('id,name,kind,parent_id').eq('user_id', user.id)
+      : Promise.resolve({ data: null }),
     txQuery,
   ])
 

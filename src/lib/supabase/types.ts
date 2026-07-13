@@ -40,6 +40,7 @@ export type Category = {
   kind: CategoryKind
   color: string | null
   icon: string | null
+  is_suggested: boolean
   created_at: string
 }
 
@@ -116,6 +117,7 @@ export interface Database {
           kind?: CategoryKind
           color?: string | null
           icon?: string | null
+          is_suggested?: boolean
           created_at?: string
         }
         Update: Partial<Category>

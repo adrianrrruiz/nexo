@@ -34,7 +34,9 @@ export default async function DashboardPage() {
         : Promise.resolve({ data: null }),
       supabase.from('account_balances').select('*'),
       supabase.from('accounts').select('id,name,type,image_path').eq('archived', false),
-      supabase.from('categories').select('id,name,kind,parent_id'),
+      user
+        ? supabase.from('categories').select('id,name,kind,parent_id').eq('user_id', user.id)
+        : Promise.resolve({ data: null }),
       supabase
         .from('transactions')
         .select('*')

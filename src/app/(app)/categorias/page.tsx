@@ -1,5 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
-import { EditCategoryButton, NewCategoryButton } from '@/components/CategoryManager'
+import {
+  CategorySuggestionGrid,
+  EditCategoryButton,
+  NewCategoryButton,
+} from '@/components/CategoryManager'
 import type { Category, CategoryKind } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
@@ -11,13 +15,33 @@ const KIND_LABEL: Record<CategoryKind, string> = {
 
 export default async function CategoriasPage() {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('categories')
-    .select('*')
-    .order('kind')
-    .order('name')
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const categories = (data ?? []) as Category[]
+  const [categoriesRes, suggestionsRes] = await Promise.all([
+    user
+      ? supabase
+          .from('categories')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('kind')
+          .order('name')
+      : Promise.resolve({ data: null }),
+    supabase
+      .from('categories')
+      .select('id,name,kind,color,icon')
+      .eq('is_suggested', true)
+      .is('parent_id', null)
+      .order('kind')
+      .order('name'),
+  ])
+
+  const categories = (categoriesRes.data ?? []) as Category[]
+  const suggestions = (suggestionsRes.data ?? []) as Pick<
+    Category,
+    'id' | 'name' | 'kind' | 'color' | 'icon'
+  >[]
   const byKind = new Map<CategoryKind, Category[]>()
   for (const category of categories) {
     const list = byKind.get(category.kind)
@@ -34,15 +58,26 @@ export default async function CategoriasPage() {
             Organiza tus movimientos con subcategorías.
           </p>
         </div>
-        <NewCategoryButton categories={categories} />
+        <NewCategoryButton categories={categories} suggestions={suggestions} />
       </header>
 
       {categories.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center">
-          <p className="text-neutral-300">Aún no tienes categorías.</p>
-          <p className="mt-2 text-sm text-neutral-500">
-            Crea las que uses para tus gastos e ingresos.
-          </p>
+        <div className="rounded-3xl border border-dashed border-white/10 p-8">
+          <div className="text-center">
+            <p className="text-neutral-300">Aún no tienes categorías.</p>
+            <p className="mt-2 text-sm text-neutral-500">
+              Crea las tuyas o usa una categoría sugerida para empezar.
+            </p>
+          </div>
+          {suggestions.length > 0 && (
+            <div className="mt-6">
+              <CategorySuggestionGrid
+                categories={categories}
+                suggestions={suggestions}
+                showKind
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-7">
