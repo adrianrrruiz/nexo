@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { Suspense, useActionState, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import DeveloperFooter from '@/components/DeveloperFooter'
 import Logo from '@/components/Logo'
 import { requestOtp, verifyOtp, type LoginState } from './actions'
@@ -12,6 +13,16 @@ const PRIMARY =
   'w-full rounded-2xl bg-gradient-to-r from-brand to-brand-deep py-3.5 font-semibold text-neutral-950 shadow-lg shadow-brand/20 disabled:opacity-60 active:opacity-90'
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const redirectPath = searchParams.get('redirect') ?? ''
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
 
@@ -49,6 +60,7 @@ export default function LoginPage() {
 
         {!sent ? (
           <form action={requestAction} className="space-y-3">
+            <input type="hidden" name="redirect" value={redirectPath} />
             <input
               type="email"
               name="email"
@@ -67,6 +79,7 @@ export default function LoginPage() {
         ) : (
           <form action={verifyAction} className="space-y-3">
             <input type="hidden" name="email" value={email} />
+            <input type="hidden" name="redirect" value={redirectPath} />
             <p className="text-center text-sm text-neutral-400">
               Código enviado a <span className="text-neutral-100">{email}</span>
             </p>

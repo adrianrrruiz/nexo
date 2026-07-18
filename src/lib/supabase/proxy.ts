@@ -42,7 +42,11 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isPublic = pathname.startsWith('/login') || pathname.startsWith('/auth')
+  const isPublic =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/.well-known') ||
+    pathname === '/oauth/consent'
 
   // Sin sesión y en ruta privada -> a /login
   if (!user && !isPublic) {

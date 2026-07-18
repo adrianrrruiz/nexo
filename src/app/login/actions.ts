@@ -5,6 +5,19 @@ import { createClient } from '@/lib/supabase/server'
 
 export type LoginState = { ok: boolean; message: string; email?: string } | null
 
+function safeRedirectPath(value: FormDataEntryValue | null) {
+  const candidate = String(value ?? '').trim()
+  if (!candidate.startsWith('/') || candidate.startsWith('//')) return '/dashboard'
+
+  try {
+    const parsed = new URL(candidate, 'https://nexo.local')
+    if (parsed.origin !== 'https://nexo.local') return '/dashboard'
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`
+  } catch {
+    return '/dashboard'
+  }
+}
+
 /** Paso 1: envía un código de un solo uso (OTP) al correo. */
 export async function requestOtp(
   _prev: LoginState,
@@ -47,5 +60,5 @@ export async function verifyOtp(
   if (error)
     return { ok: false, message: 'Código inválido o expirado.', email }
 
-  redirect('/dashboard')
+  redirect(safeRedirectPath(formData.get('redirect')))
 }

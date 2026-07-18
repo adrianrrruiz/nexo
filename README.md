@@ -32,18 +32,57 @@ scripts/
 public/sw.js          # service worker (PWA)
 ```
 
-## MCP financiero para Claude Code
+## MCP financiero para Claude
 
 Nexo expone un MCP remoto de solo lectura en `/api/mcp`. Incluye herramientas
 para resumir finanzas, buscar movimientos, comparar periodos y consultar saldos.
-El endpoint usa un Bearer token personal y queda vinculado en el servidor a un
-solo usuario de Supabase.
+El endpoint acepta OAuth 2.1 de Supabase Auth: cada solicitud se vincula al
+usuario autenticado y las herramientas consultan únicamente su `user_id`.
+La migración `mcp_oauth_read_only` añade políticas restrictivas para que los
+tokens OAuth tampoco puedan escribir directamente mediante la Data API.
 
-Configura estas variables tanto en `.env.local` como en Vercel:
+### Activar el conector OAuth
+
+En el dashboard del proyecto de Supabase:
+
+1. En **Authentication → URL Configuration**, configura como **Site URL** el
+   dominio de producción de Nexo, por ejemplo `https://nexo.example.com`.
+2. En **Authentication → OAuth Server**, activa el servidor OAuth 2.1.
+3. Configura **Authorization Path** como `/oauth/consent`.
+4. Activa **Dynamic Client Registration** para que los clientes MCP puedan
+   registrarse automáticamente.
+5. Usa una llave de firma JWT asimétrica (RS256 o ES256), recomendada por
+   Supabase para OAuth.
+
+Aplica la política de solo lectura y vuelve a desplegar la aplicación:
 
 ```bash
-MCP_ACCESS_TOKEN=<token aleatorio de al menos 32 bytes>
-MCP_USER_ID=<uuid del usuario en Supabase Auth>
+npm run db:push
+# después, publica el nuevo commit en Vercel
+```
+
+Después de desplegar, estos endpoints deben ser públicos:
+
+```text
+https://TU-DOMINIO/api/mcp
+https://TU-DOMINIO/.well-known/oauth-protected-resource
+https://TU-DOMINIO/.well-known/oauth-protected-resource/api/mcp
+```
+
+Para agregarlo en Claude, crea un conector personalizado con la URL
+`https://TU-DOMINIO/api/mcp`. Claude descubrirá Supabase Auth, abrirá el login
+por código de Nexo y mostrará la pantalla de consentimiento antes de emitir los
+tokens de acceso y renovación.
+
+### Compatibilidad con el token personal
+
+El Bearer token anterior continúa disponible temporalmente para no interrumpir
+Claude Code durante la migración. Configura estas variables tanto en
+`.env.local` como en Vercel solo si todavía lo utilizas:
+
+```bash
+MCP_ACCESS_TOKEN=<token personal existente de al menos 32 bytes>
+MCP_USER_ID=<uuid vinculado al token personal>
 SUPABASE_SERVICE_ROLE_KEY=<clave server-side de Supabase ya configurada>
 ```
 
@@ -60,7 +99,9 @@ export NEXO_MCP_TOKEN=TU_MCP_ACCESS_TOKEN
 
 Al abrir Claude Code en este proyecto, aprueba el servidor de alcance de proyecto
 y verifica la conexión con `/mcp`. El archivo versionado solo contiene referencias
-a variables de entorno; el token permanece fuera de Git.
+a variables de entorno; el token permanece fuera de Git. Cuando Claude Code use
+el conector OAuth, podrán retirarse `MCP_ACCESS_TOKEN`, `MCP_USER_ID` y los
+encabezados de `.mcp.json`.
 
 ## Modelo de datos
 

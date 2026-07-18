@@ -47,10 +47,14 @@ const handler = createMcpHandler(
           end_date: dateSchema.optional().describe('Fecha final inclusiva.'),
         },
       },
-      async ({ start_date, end_date }) => {
+      async ({ start_date, end_date }, { authInfo }) => {
         try {
           return jsonContent(
-            await getFinancialSummary(getMcpUserId(), start_date, end_date)
+            await getFinancialSummary(
+              getMcpUserId(authInfo),
+              start_date,
+              end_date
+            )
           )
         } catch (error) {
           return toolError(error)
@@ -89,9 +93,11 @@ const handler = createMcpHandler(
           limit: z.number().int().min(1).max(50).default(25),
         },
       },
-      async (input) => {
+      async (input, { authInfo }) => {
         try {
-          return jsonContent(await searchTransactions(getMcpUserId(), input))
+          return jsonContent(
+            await searchTransactions(getMcpUserId(authInfo), input)
+          )
         } catch (error) {
           return toolError(error)
         }
@@ -111,16 +117,19 @@ const handler = createMcpHandler(
           second_end_date: dateSchema,
         },
       },
-      async ({
-        first_start_date,
-        first_end_date,
-        second_start_date,
-        second_end_date,
-      }) => {
+      async (
+        {
+          first_start_date,
+          first_end_date,
+          second_start_date,
+          second_end_date,
+        },
+        { authInfo }
+      ) => {
         try {
           return jsonContent(
             await comparePeriods(
-              getMcpUserId(),
+              getMcpUserId(authInfo),
               { start_date: first_start_date, end_date: first_end_date },
               { start_date: second_start_date, end_date: second_end_date }
             )
@@ -141,9 +150,11 @@ const handler = createMcpHandler(
           include_archived: z.boolean().default(false),
         },
       },
-      async ({ include_archived }) => {
+      async ({ include_archived }, { authInfo }) => {
         try {
-          return jsonContent(await listAccounts(getMcpUserId(), include_archived))
+          return jsonContent(
+            await listAccounts(getMcpUserId(authInfo), include_archived)
+          )
         } catch (error) {
           return toolError(error)
         }
@@ -163,4 +174,20 @@ const authenticatedHandler = withMcpAuth(handler, verifyMcpToken, {
   requiredScopes: [MCP_READ_SCOPE],
 })
 
-export { authenticatedHandler as GET, authenticatedHandler as POST }
+async function mcpRequestHandler(request: Request) {
+  const response = await authenticatedHandler(request)
+  const challenge = response.headers.get('WWW-Authenticate')
+
+  if ((response.status === 401 || response.status === 403) && challenge) {
+    response.headers.set(
+      'WWW-Authenticate',
+      challenge.includes('scope=')
+        ? challenge
+        : `${challenge}, scope="${MCP_READ_SCOPE}"`
+    )
+  }
+
+  return response
+}
+
+export { mcpRequestHandler as GET, mcpRequestHandler as POST }
