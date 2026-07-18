@@ -7,6 +7,14 @@ import type { Database } from './types'
  * Basado en el patrón oficial de @supabase/ssr para Next.js App Router.
  */
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // El MCP remoto no usa la cookie de la PWA. Su Route Handler valida un
+  // Bearer token propio antes de permitir cualquier consulta financiera.
+  if (pathname.startsWith('/api/mcp')) {
+    return NextResponse.next({ request })
+  }
+
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient<Database>(
@@ -34,7 +42,6 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { pathname } = request.nextUrl
   const isPublic = pathname.startsWith('/login') || pathname.startsWith('/auth')
 
   // Sin sesión y en ruta privada -> a /login

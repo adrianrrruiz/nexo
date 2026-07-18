@@ -32,6 +32,36 @@ scripts/
 public/sw.js          # service worker (PWA)
 ```
 
+## MCP financiero para Claude Code
+
+Nexo expone un MCP remoto de solo lectura en `/api/mcp`. Incluye herramientas
+para resumir finanzas, buscar movimientos, comparar periodos y consultar saldos.
+El endpoint usa un Bearer token personal y queda vinculado en el servidor a un
+solo usuario de Supabase.
+
+Configura estas variables tanto en `.env.local` como en Vercel:
+
+```bash
+MCP_ACCESS_TOKEN=<token aleatorio de al menos 32 bytes>
+MCP_USER_ID=<uuid del usuario en Supabase Auth>
+SUPABASE_SERVICE_ROLE_KEY=<clave server-side de Supabase ya configurada>
+```
+
+La clave `SUPABASE_SERVICE_ROLE_KEY` se reutiliza en el MCP y nunca debe llevar
+el prefijo `NEXT_PUBLIC_`.
+
+El repositorio incluye `.mcp.json` sin secretos. Antes de abrir Claude Code,
+define estas variables en tu terminal:
+
+```bash
+export NEXO_MCP_URL=https://TU-DOMINIO
+export NEXO_MCP_TOKEN=TU_MCP_ACCESS_TOKEN
+```
+
+Al abrir Claude Code en este proyecto, aprueba el servidor de alcance de proyecto
+y verifica la conexión con `/mcp`. El archivo versionado solo contiene referencias
+a variables de entorno; el token permanece fuera de Git.
+
 ## Modelo de datos
 
 `accounts`, `categories` (jerárquicas), `transactions`

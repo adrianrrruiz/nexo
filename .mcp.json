@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "nexo": {
+      "type": "http",
+      "url": "${NEXO_MCP_URL}/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${NEXO_MCP_TOKEN}"
+      }
+    }
+  }
+}
