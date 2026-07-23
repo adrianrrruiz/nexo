@@ -1,6 +1,5 @@
 'use client'
 
-import { useRef } from 'react'
 import { formatLongDate } from '@/lib/format'
 
 export default function DateTextField({
@@ -12,27 +11,24 @@ export default function DateTextField({
   value: string
   onChange: (value: string) => void
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-
   return (
     <div className="relative">
+      {/*
+        El input real se superpone transparente y a tamaño completo, de modo que
+        el toque cae directamente sobre él. iOS Safari solo abre el selector de
+        fecha nativo cuando el usuario toca un <input type="date"> visible y
+        tappable; ocultarlo y reenviarle un .click()/showPicker() desde otro
+        elemento no lo abre en iPhone.
+      */}
       <input
-        ref={inputRef}
         type="date"
         name={name}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="sr-only"
-        tabIndex={-1}
+        aria-label="Fecha del movimiento"
+        className="peer absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none opacity-0"
       />
-      <button
-        type="button"
-        onClick={() => {
-          if (inputRef.current?.showPicker) inputRef.current.showPicker()
-          else inputRef.current?.click()
-        }}
-        className="flex w-full items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.05] px-4 py-3.5 text-left text-base text-neutral-100 outline-none transition-colors focus:border-brand/60"
-      >
+      <div className="pointer-events-none flex w-full items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.05] px-4 py-3.5 text-left text-base text-neutral-100 transition-colors peer-focus:border-brand/60">
         <span className="capitalize">{formatLongDate(value)}</span>
         <svg
           viewBox="0 0 24 24"
@@ -47,7 +43,7 @@ export default function DateTextField({
           <rect x="4" y="5" width="16" height="16" rx="3" />
           <path d="M4 10h16" />
         </svg>
-      </button>
+      </div>
     </div>
   )
 }
