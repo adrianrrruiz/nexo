@@ -6,7 +6,12 @@ import Logo from '@/components/Logo'
 import TransactionRow from '@/components/TransactionRow'
 import DeveloperFooter from '@/components/DeveloperFooter'
 import { createAccountImageUrlMap, createProfileAvatarUrl } from '@/lib/account-images'
-import { categoryGroupKey, categoryLabel } from '@/lib/categories'
+import {
+  categoryGroupId,
+  categoryLabel,
+  UNCATEGORIZED_KEY,
+  UNCATEGORIZED_LABEL,
+} from '@/lib/categories'
 import { getTransactionMeta } from '@/lib/transaction-meta'
 import type {
   AccountBalance,
@@ -84,7 +89,7 @@ export default async function DashboardPage() {
   const expenseByCat = new Map<string, number>()
   const incomeByCat = new Map<string, number>()
   for (const t of month) {
-    const key = categoryGroupKey(t.category_id, categoryName, categoryParent)
+    const key = categoryGroupId(t.category_id, categoryParent) ?? UNCATEGORIZED_KEY
     if (t.type === 'expense') {
       expenseByCat.set(key, (expenseByCat.get(key) ?? 0) + Number(t.amount))
     }
@@ -92,8 +97,8 @@ export default async function DashboardPage() {
       incomeByCat.set(key, (incomeByCat.get(key) ?? 0) + Number(t.amount))
     }
   }
-  const topExpense = toBreakdown(expenseByCat)
-  const topIncome = toBreakdown(incomeByCat)
+  const topExpense = toBreakdown(expenseByCat, categoryName)
+  const topIncome = toBreakdown(incomeByCat, categoryName)
 
   const noData = balances.length === 0
   const firstName = profile?.full_name?.trim() || user?.email?.split('@')[0] || 'Nexo'
@@ -237,15 +242,26 @@ export default async function DashboardPage() {
 }
 
 type BreakdownItem = {
+  id: string
   name: string
   amount: number
   percent: number
 }
 
-function toBreakdown(source: Map<string, number>): BreakdownItem[] {
+function toBreakdown(
+  source: Map<string, number>,
+  categoryName: Map<string, string>
+): BreakdownItem[] {
   const items = [...source.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([name, amount]) => ({ name, amount }))
+    .map(([id, amount]) => ({
+      id,
+      name:
+        id === UNCATEGORIZED_KEY
+          ? UNCATEGORIZED_LABEL
+          : categoryName.get(id) ?? UNCATEGORIZED_LABEL,
+      amount,
+    }))
   const total = items.reduce((sum, item) => sum + item.amount, 0)
   return items.slice(0, 7).map((item) => ({
     ...item,
@@ -273,11 +289,18 @@ function CategoryBreakdown({
           {formatCOP(total)}
         </span>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-1">
         {items.map((item) => (
-          <div key={item.name}>
-            <div className="flex justify-between gap-3 text-sm">
-              <span className="truncate text-neutral-300">{item.name}</span>
+          <Link
+            key={item.id}
+            href={`/movimientos?categoria=${item.id}`}
+            aria-label={`Ver movimientos de ${item.name}`}
+            className="group -mx-2 block rounded-xl px-2 py-1.5 transition-colors hover:bg-white/[0.05] active:bg-white/[0.08]"
+          >
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="truncate text-neutral-300 transition-colors group-hover:text-neutral-100">
+                {item.name}
+              </span>
               <span className="shrink-0 tabular-nums text-neutral-500">
                 {formatCOP(item.amount)}
               </span>
@@ -288,7 +311,7 @@ function CategoryBreakdown({
                 style={{ width: `${Math.max(item.percent, 3)}%` }}
               />
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </section>
