@@ -1,7 +1,7 @@
 # Nexo
 
-App de finanzas personales (PWA). Registro manual, importación desde Money
-Manager y dashboard. **Next.js 16 + Supabase**, mobile-first.
+App de finanzas personales (PWA). Registro manual y dashboard.
+**Next.js 16 + Supabase**, mobile-first.
 
 ## Stack
 
@@ -27,8 +27,6 @@ src/
   proxy.ts            # auth gating (antes "middleware")
 supabase/
   migrations/         # esquema versionado
-scripts/
-  import-excel.ts     # importador del export de Money Manager
 public/sw.js          # service worker (PWA)
 ```
 
@@ -119,8 +117,7 @@ Supabase (Dashboard → Project Settings → API):
 ```
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...   # solo para el importador
-IMPORT_USER_ID=...              # tu user id de Auth (para importar)
+SUPABASE_SERVICE_ROLE_KEY=...   # solo server-side (MCP)
 ```
 
 ### 2. Base de datos
@@ -139,17 +136,7 @@ supabase start
 supabase db reset      # aplica migrations en local
 ```
 
-### 3. Importar tu historial
-
-```bash
-npm run import "/ruta/al/2026-07-11.xlsx" --dry-run   # revisa el resumen
-npm run import "/ruta/al/2026-07-11.xlsx"             # inserta en Supabase
-```
-
-El importador fusiona las transferencias (que Money Manager exporta en 2 filas)
-y trata las filas de balance como ajustes.
-
-### 4. Correr la app
+### 3. Correr la app
 
 ```bash
 npm run dev            # http://localhost:3000
@@ -159,9 +146,8 @@ Para instalarla en el iPhone: ábrela en Safari → Compartir → "Agregar a ini
 
 ## Notas
 
-- **Saldos iniciales:** el export de Money Manager no incluye el saldo inicial
-  de cada cuenta, así que se importan en 0 y los saldos reflejan el flujo neto
-  desde el primer movimiento. Ajusta `initial_balance` de cada cuenta para que
-  los saldos coincidan con la realidad (initial = saldo_actual − flujo_neto).
+- **Saldos iniciales:** ajusta `initial_balance` de cada cuenta para que los
+  saldos reflejen la realidad (initial = saldo_actual − flujo_neto de sus
+  movimientos).
 - Fase 2 (pendiente): automatización del registro desde correos de banco con un
   inbox de verificación.

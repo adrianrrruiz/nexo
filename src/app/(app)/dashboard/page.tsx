@@ -313,12 +313,8 @@ function EmptyState() {
     <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center">
       <p className="text-neutral-300">Aún no hay datos.</p>
       <p className="mt-2 text-sm text-neutral-500">
-        Importa tu historial con{' '}
-        <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-neutral-300">
-          npm run import
-        </code>{' '}
-        o toca el botón <span className="font-semibold text-brand">+</span> para tu
-        primer movimiento.
+        Toca el botón <span className="font-semibold text-brand">+</span> para
+        registrar tu primer movimiento.
       </p>
     </div>
   )

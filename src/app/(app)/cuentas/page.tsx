@@ -103,11 +103,8 @@ export default async function CuentasPage() {
         <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center">
           <p className="text-neutral-300">Aún no tienes cuentas.</p>
           <p className="mt-2 text-sm text-neutral-500">
-            Importa tu historial con{' '}
-            <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-neutral-300">
-              npm run import
-            </code>
-            .
+            Usa el botón <span className="font-semibold text-brand">Nueva</span>{' '}
+            para crear tu primera cuenta.
           </p>
         </div>
       ) : (
