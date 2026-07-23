@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
+import SplashScreen from '@/components/SplashScreen'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -39,6 +40,7 @@ export default function RootLayout({
   return (
     <html lang="es-CO" className={`${geistSans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col text-neutral-100">
+        <SplashScreen />
         {children}
         <ServiceWorkerRegister />
       </body>

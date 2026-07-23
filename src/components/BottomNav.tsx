@@ -47,41 +47,53 @@ const ITEMS = [
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const activeIndex = ITEMS.findIndex((item) => pathname.startsWith(item.href))
+  const currentIndex = activeIndex === -1 ? 0 : activeIndex
 
   return (
     <nav className="fixed inset-x-0 bottom-4 z-20 flex justify-center px-6">
-      <div className="relative flex w-fit items-center justify-center gap-1 overflow-hidden rounded-full border border-white/20 bg-white/[0.08] px-2 py-2 shadow-[0_18px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150">
+      <div className="relative overflow-hidden rounded-full border border-white/20 bg-white/[0.08] px-2 py-2 shadow-[0_18px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150">
         <div className="pointer-events-none absolute inset-x-3 top-0 h-px bg-white/35" />
         <div className="pointer-events-none absolute -left-8 top-0 h-16 w-24 rounded-full bg-white/10 blur-2xl" />
         <div className="pointer-events-none absolute -right-8 bottom-0 h-16 w-24 rounded-full bg-brand/10 blur-2xl" />
-        {ITEMS.map((item) => {
-          const active = pathname.startsWith(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              className={`relative flex min-w-0 flex-col items-center gap-0.5 rounded-full px-3 py-1.5 transition-colors ${
-                active
-                  ? 'bg-white/[0.13] text-brand shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]'
-                  : 'text-neutral-400 hover:text-neutral-100'
-              }`}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+        <div className="relative grid grid-cols-4">
+          {/* Indicador activo que se desliza entre las pestañas */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-0 w-1/4 p-1 transition-transform duration-300 ease-out"
+            style={{ transform: `translateX(${currentIndex * 100}%)` }}
+          >
+            <div className="h-full w-full rounded-full bg-white/[0.13] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]" />
+          </div>
+          {ITEMS.map((item, index) => {
+            const active = index === currentIndex
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={`relative z-10 flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 transition-colors duration-200 ${
+                  active ? 'text-brand' : 'text-neutral-400 hover:text-neutral-100'
+                }`}
               >
-                {item.icon}
-              </svg>
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </Link>
-          )
-        })}
+                <svg
+                  viewBox="0 0 24 24"
+                  className={`h-5 w-5 transition-transform duration-200 ${
+                    active ? 'scale-110' : 'scale-100'
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {item.icon}
+                </svg>
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </Link>
+            )
+          })}
+        </div>
       </div>
     </nav>
   )

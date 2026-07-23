@@ -40,3 +40,78 @@ body::before {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Pantalla de arranque (SplashScreen) */
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(70% 44% at 50% 0%, rgba(29, 205, 159, 0.12), transparent 72%),
+    #050807;
+  transition: opacity 0.45s ease;
+}
+.splash-screen--hiding {
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-logo {
+  animation: splash-pulse 1.6s ease-in-out infinite;
+}
+@keyframes splash-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Spinner de carga discreto (loading.tsx) */
+.app-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  border: 2px solid rgba(29, 205, 159, 0.2);
+  border-top-color: #1dcd9f;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Transición de entrada del contenido al cambiar de ruta */
+.page-enter {
+  animation: page-enter 0.28s ease-out;
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Accesibilidad: respeta la preferencia de menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

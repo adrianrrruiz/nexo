@@ -1,4 +1,5 @@
 import BottomNav from '@/components/BottomNav'
+import PageTransition from '@/components/PageTransition'
 
 export default function AppLayout({
   children,
@@ -6,7 +7,7 @@ export default function AppLayout({
   return (
     <>
       <main className="mx-auto w-full max-w-md flex-1 px-5 pb-36 pt-5">
-        {children}
+        <PageTransition>{children}</PageTransition>
       </main>
       <BottomNav />
     </>
