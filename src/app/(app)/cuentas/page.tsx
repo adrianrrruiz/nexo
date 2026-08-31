@@ -45,8 +45,18 @@ const TYPE_ICON: Record<AccountType, React.ReactNode> = {
 
 export default async function CuentasPage() {
   const supabase = await createClient()
-  const { data } = await supabase.from('account_balances').select('*')
-  const balances = (data ?? []) as AccountBalance[]
+  const [balancesRes, accountsRes] = await Promise.all([
+    supabase.from('account_balances').select('*'),
+    supabase.from('accounts').select('id').eq('archived', false),
+  ])
+  const queryError = balancesRes.error ?? accountsRes.error
+  if (queryError) {
+    throw new Error(`No se pudieron cargar los saldos de las cuentas: ${queryError.message}`)
+  }
+  const activeAccountIds = new Set((accountsRes.data ?? []).map((account) => account.id))
+  const balances = ((balancesRes.data ?? []) as AccountBalance[]).filter((balance) =>
+    activeAccountIds.has(balance.id)
+  )
   const imageUrls = await createAccountImageUrlMap(balances.map((b) => b.image_path))
 
   const total = balances.reduce((s, b) => s + Number(b.balance), 0)
@@ -61,9 +71,9 @@ export default async function CuentasPage() {
 
   return (
     <>
-      <header className="mb-6 flex items-start justify-between gap-4">
+      <header className="mb-6 flex items-start justify-between gap-4 lg:mb-8">
         <div>
-          <h1 className="text-xl font-semibold">Cuentas</h1>
+          <h1 className="text-xl font-semibold lg:text-2xl">Cuentas</h1>
           <p className="mt-0.5 text-sm text-neutral-500">
             Total:{' '}
             <span className="font-semibold text-brand tabular-nums">
@@ -108,13 +118,13 @@ export default async function CuentasPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-7">
+        <div className="grid items-start gap-7 xl:grid-cols-2">
           {[...byType.entries()].map(([type, list]) => (
             <section key={type}>
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 {TYPE_LABEL[type] ?? type}
               </h2>
-              <div className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                 {list.map((b) => (
                   <article
                     key={b.id}

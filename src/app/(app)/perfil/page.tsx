@@ -33,36 +33,40 @@ export default async function PerfilPage() {
   return (
     <>
       <header className="mb-8">
-        <h1 className="text-xl font-semibold">Perfil</h1>
+        <h1 className="text-xl font-semibold lg:text-2xl">Perfil</h1>
       </header>
 
-      <div className="mb-6 flex flex-col items-center rounded-[28px] border border-white/[0.06] bg-white/[0.03] p-8 text-center">
-        <ProfileAvatarUploader initial={initial} imageUrl={avatarUrl} />
-        <p className="mt-4 max-w-full truncate text-sm font-medium">{displayName}</p>
-        <p className="mt-1 max-w-full truncate text-xs text-neutral-500">{email}</p>
-        {since && (
-          <p className="mt-1 text-xs text-neutral-500">En Nexo desde {since}</p>
-        )}
-        <ProfileForm fullName={profile?.full_name ?? ''} />
-      </div>
+      <div className="mx-auto grid max-w-4xl items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex flex-col items-center rounded-[28px] border border-white/[0.06] bg-white/[0.03] p-8 text-center">
+          <ProfileAvatarUploader initial={initial} imageUrl={avatarUrl} />
+          <p className="mt-4 max-w-full truncate text-sm font-medium">{displayName}</p>
+          <p className="mt-1 max-w-full truncate text-xs text-neutral-500">{email}</p>
+          {since && (
+            <p className="mt-1 text-xs text-neutral-500">En Nexo desde {since}</p>
+          )}
+          <ProfileForm fullName={profile?.full_name ?? ''} />
+        </div>
 
-      <div className="mb-6 rounded-3xl border border-white/[0.06] bg-white/[0.03] p-5">
-        <div className="flex items-center gap-3">
-          <Logo className="h-8 w-8" id="nexo-logo-perfil" />
-          <div>
-            <p className="text-sm font-medium">Nexo</p>
-            <p className="text-xs text-neutral-500">
-              Tus finanzas personales, con el control de tus datos.
-            </p>
+        <div className="space-y-4">
+          <div className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-5">
+            <div className="flex items-center gap-3">
+              <Logo className="h-8 w-8" id="nexo-logo-perfil" />
+              <div>
+                <p className="text-sm font-medium">Nexo</p>
+                <p className="text-xs text-neutral-500">
+                  Tus finanzas personales, con el control de tus datos.
+                </p>
+              </div>
+            </div>
           </div>
+
+          <form action="/auth/signout" method="post">
+            <button className="w-full rounded-2xl border border-red-500/20 bg-red-500/10 py-3.5 text-sm font-semibold text-red-400 active:bg-red-500/20">
+              Cerrar sesión
+            </button>
+          </form>
         </div>
       </div>
-
-      <form action="/auth/signout" method="post">
-        <button className="w-full rounded-2xl border border-red-500/20 bg-red-500/10 py-3.5 text-sm font-semibold text-red-400 active:bg-red-500/20">
-          Cerrar sesión
-        </button>
-      </form>
     </>
   )
 }

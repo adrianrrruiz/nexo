@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import {
   CategorySuggestionGrid,
   EditCategoryButton,
@@ -18,16 +19,16 @@ export default async function CategoriasPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const [categoriesRes, suggestionsRes] = await Promise.all([
-    user
-      ? supabase
-          .from('categories')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('kind')
-          .order('name')
-      : Promise.resolve({ data: null }),
+    supabase
+      .from('categories')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_suggested', false)
+      .order('kind')
+      .order('name'),
     supabase
       .from('categories')
       .select('id,name,kind,color,icon')
@@ -36,6 +37,11 @@ export default async function CategoriasPage() {
       .order('kind')
       .order('name'),
   ])
+
+  const queryError = categoriesRes.error ?? suggestionsRes.error
+  if (queryError) {
+    throw new Error(`No se pudieron cargar las categorías: ${queryError.message}`)
+  }
 
   const categories = (categoriesRes.data ?? []) as Category[]
   const suggestions = (suggestionsRes.data ?? []) as Pick<
@@ -51,9 +57,9 @@ export default async function CategoriasPage() {
 
   return (
     <>
-      <header className="mb-6 flex items-start justify-between gap-4">
+      <header className="mb-6 flex items-start justify-between gap-4 lg:mb-8">
         <div>
-          <h1 className="text-xl font-semibold">Categorías</h1>
+          <h1 className="text-xl font-semibold lg:text-2xl">Categorías</h1>
           <p className="mt-0.5 text-sm text-neutral-500">
             Organiza tus movimientos con subcategorías.
           </p>
@@ -80,7 +86,7 @@ export default async function CategoriasPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-7">
+        <div className="grid items-start gap-7 lg:grid-cols-2">
           {(['expense', 'income'] as CategoryKind[]).map((kind) => {
             const items = byKind.get(kind) ?? []
             if (items.length === 0) return null
@@ -98,7 +104,7 @@ export default async function CategoriasPage() {
                 <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
                   {KIND_LABEL[kind]}
                 </h2>
-                <div className="space-y-3">
+                <div className="grid gap-3 2xl:grid-cols-2">
                   {parents.map((parent) => (
                     <div
                       key={parent.id}

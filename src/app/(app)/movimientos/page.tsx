@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP, formatDateInputValue, formatDay, formatMonth } from '@/lib/format'
 import QuickEntry from '@/components/QuickEntry'
@@ -34,6 +35,7 @@ export default async function MovimientosPage({
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
   const { cuenta, categoria } = await searchParams
   const selectedAccountId = cuenta ?? ''
   const selectedCategoryId = categoria ?? ''
@@ -42,10 +44,17 @@ export default async function MovimientosPage({
   // los ids del grupo (padre + subcategorías) antes de consultar movimientos.
   const [accountsRes, categoriesRes] = await Promise.all([
     supabase.from('accounts').select('id,name,type,image_path').eq('archived', false),
-    user
-      ? supabase.from('categories').select('id,name,kind,parent_id').eq('user_id', user.id)
-      : Promise.resolve({ data: null }),
+    supabase
+      .from('categories')
+      .select('id,name,kind,parent_id')
+      .eq('user_id', user.id)
+      .eq('is_suggested', false),
   ])
+
+  const setupError = accountsRes.error ?? categoriesRes.error
+  if (setupError) {
+    throw new Error(`No se pudieron cargar los filtros de movimientos: ${setupError.message}`)
+  }
 
   const accounts = (accountsRes.data ?? []) as Pick<
     Account,
@@ -78,6 +87,9 @@ export default async function MovimientosPage({
   }
 
   const txRes = await txQuery
+  if (txRes.error) {
+    throw new Error(`No se pudieron cargar los movimientos: ${txRes.error.message}`)
+  }
   const txs = (txRes.data ?? []) as Transaction[]
 
   const accountName = new Map(accounts.map((a) => [a.id, a.name]))
@@ -105,8 +117,8 @@ export default async function MovimientosPage({
 
   return (
     <>
-      <header className="mb-6">
-        <h1 className="text-xl font-semibold">Movimientos</h1>
+      <header className="mb-6 lg:mb-8">
+        <h1 className="text-xl font-semibold lg:text-2xl">Movimientos</h1>
         <p className="mt-0.5 text-sm text-neutral-500">
           {selectedCategoryName
             ? `${txs.length} registros en ${selectedCategoryName}`
@@ -163,7 +175,10 @@ export default async function MovimientosPage({
       ) : (
         <div className="space-y-6">
           {[...byMonth.entries()].map(([month, list]) => (
-            <section key={month} className="space-y-3">
+            <section
+              key={month}
+              className="space-y-3 lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-5 lg:space-y-0"
+            >
               <MonthSummary
                 month={list[0]?.occurred_at ?? `${month}-01T12:00:00-05:00`}
                 transactions={list}
@@ -215,7 +230,7 @@ function MonthSummary({
   const incomeByCat = collectByCategory(transactions, categoryName, categoryParent, 'income')
 
   return (
-    <div className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-5">
+    <div className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-5 lg:sticky lg:top-8">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold capitalize text-neutral-100">

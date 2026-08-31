@@ -1,7 +1,7 @@
-// Nexo service worker — habilita instalación como PWA y un cascarón offline
-// básico. Estrategia: network-first para navegación (para no servir HTML viejo),
-// cache-first para assets estáticos ya vistos.
-const CACHE = 'nexo-v1'
+// Nexo service worker — habilita la instalación como PWA.
+// Los documentos autenticados nunca se guardan: un saldo financiero obsoleto
+// es peor que una pantalla sin conexión. Solo se cachean assets versionados.
+const CACHE = 'nexo-static-v2'
 
 self.addEventListener('install', (event) => {
   self.skipWaiting()
@@ -25,25 +25,22 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return
 
-  // Navegación (páginas): network-first con fallback a caché.
+  // Nunca cachear HTML, Server Components ni APIs con datos del usuario.
   if (request.mode === 'navigate') {
-    event.respondWith(
-      (async () => {
-        try {
-          const fresh = await fetch(request)
-          const cache = await caches.open(CACHE)
-          cache.put(request, fresh.clone())
-          return fresh
-        } catch {
-          const cached = await caches.match(request)
-          return cached ?? caches.match('/')
-        }
-      })()
-    )
+    event.respondWith(fetch(request))
     return
   }
 
-  // Assets del mismo origen: cache-first, y refresca en segundo plano.
+  if (url.pathname.startsWith('/api/') || url.searchParams.has('_rsc')) return
+
+  const isVersionedAsset =
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.startsWith('/_next/image') ||
+    /\.(?:png|jpg|jpeg|webp|svg|ico|woff2?)$/i.test(url.pathname)
+
+  if (!isVersionedAsset) return
+
+  // Los assets estáticos sí son seguros de cachear.
   event.respondWith(
     (async () => {
       const cached = await caches.match(request)

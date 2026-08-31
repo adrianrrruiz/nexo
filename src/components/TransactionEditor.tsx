@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   deleteTransaction,
   updateTransaction,
@@ -53,6 +54,7 @@ export default function TransactionEditor({
   categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>[]
   renderTrigger?: (open: () => void) => React.ReactNode
 }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<TransactionType>(
     transaction.type === 'adjustment' ? 'expense' : transaction.type
@@ -74,10 +76,11 @@ export default function TransactionEditor({
 
   useEffect(() => {
     if (state?.ok || deleteState?.ok) {
+      router.refresh()
       const t = setTimeout(() => setOpen(false), 700)
       return () => clearTimeout(t)
     }
-  }, [state, deleteState])
+  }, [router, state, deleteState])
 
   const kind = type === 'income' ? 'income' : 'expense'
   const cats = categories.filter((c) => c.kind === kind)
@@ -113,8 +116,8 @@ export default function TransactionEditor({
       )}
 
       {open && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-t-[28px] border-t border-white/10 bg-surface p-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 backdrop-blur-sm lg:items-center lg:p-8">
+          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[28px] border-t border-white/10 bg-surface p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-2xl shadow-black/50 lg:rounded-[28px] lg:border">
             <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/15" />
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Editar movimiento</h2>

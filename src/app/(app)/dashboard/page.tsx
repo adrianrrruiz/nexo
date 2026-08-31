@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP, formatDay, currentMonthRange } from '@/lib/format'
 import QuickEntry from '@/components/QuickEntry'
@@ -29,19 +30,20 @@ export default async function DashboardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const { start, end } = currentMonthRange()
 
   const [profileRes, balancesRes, accountsRes, categoriesRes, recentRes, monthRes] =
     await Promise.all([
-      user
-        ? supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
-        : Promise.resolve({ data: null }),
+      supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
       supabase.from('account_balances').select('*'),
       supabase.from('accounts').select('id,name,type,image_path').eq('archived', false),
-      user
-        ? supabase.from('categories').select('id,name,kind,parent_id').eq('user_id', user.id)
-        : Promise.resolve({ data: null }),
+      supabase
+        .from('categories')
+        .select('id,name,kind,parent_id')
+        .eq('user_id', user.id)
+        .eq('is_suggested', false),
       supabase
         .from('transactions')
         .select('*')
@@ -54,12 +56,27 @@ export default async function DashboardPage() {
         .lt('occurred_at', end),
     ])
 
+  const queryError = [
+    profileRes.error,
+    balancesRes.error,
+    accountsRes.error,
+    categoriesRes.error,
+    recentRes.error,
+    monthRes.error,
+  ].find(Boolean)
+  if (queryError) {
+    throw new Error(`No se pudieron cargar los datos financieros: ${queryError.message}`)
+  }
+
   const profile = profileRes.data as Profile | null
-  const balances = (balancesRes.data ?? []) as AccountBalance[]
   const accounts = (accountsRes.data ?? []) as Pick<
     Account,
     'id' | 'name' | 'type' | 'image_path'
   >[]
+  const activeAccountIds = new Set(accounts.map((account) => account.id))
+  const balances = ((balancesRes.data ?? []) as AccountBalance[]).filter((balance) =>
+    activeAccountIds.has(balance.id)
+  )
   const categories = (categoriesRes.data ?? []) as Pick<
     Category,
     'id' | 'name' | 'kind' | 'parent_id'
@@ -105,12 +122,12 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <header className="mb-6 flex items-center justify-between">
+      <header className="mb-6 flex items-center justify-between lg:mb-8">
         <div className="flex items-center gap-3">
           <Logo className="h-9 w-9" id="nexo-logo-dash" />
           <div>
-            <p className="text-xs text-neutral-500">Hola,</p>
-            <h1 className="text-base font-semibold leading-tight">{firstName}</h1>
+            <p className="text-xs text-neutral-500 lg:text-sm">Hola,</p>
+            <h1 className="text-base font-semibold leading-tight lg:text-xl">{firstName}</h1>
           </div>
         </div>
         <Link
@@ -128,12 +145,12 @@ export default async function DashboardPage() {
       </header>
 
       {/* Patrimonio neto */}
-      <section className="relative mb-6 overflow-hidden rounded-[28px] bg-gradient-to-br from-brand to-brand-deep p-6">
+      <section className="relative mb-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-brand to-brand-deep p-6 lg:p-8">
         <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-white/15 blur-2xl" />
         <p className="text-xs font-medium uppercase tracking-wider text-emerald-950/60">
           Patrimonio neto
         </p>
-        <p className="mt-1.5 text-4xl font-bold tracking-tight text-neutral-950">
+        <p className="mt-1.5 text-4xl font-bold tracking-tight text-neutral-950 lg:text-5xl">
           {formatCOP(netWorth)}
         </p>
         <div className="mt-5 flex items-center gap-2 text-xs font-semibold">
@@ -153,11 +170,11 @@ export default async function DashboardPage() {
         <>
           {/* Cuentas */}
           <SectionHeader title="Cuentas" href="/cuentas" />
-          <div className="no-scrollbar mb-7 flex gap-3 overflow-x-auto pb-1">
+          <div className="no-scrollbar mb-8 flex gap-3 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5">
             {balances.map((b) => (
               <div
                 key={b.id}
-                className="min-w-[148px] rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4"
+                className="min-w-[148px] rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4 transition-colors hover:border-brand/20 hover:bg-white/[0.05] lg:min-w-0"
               >
                 <p className="truncate text-xs text-neutral-400">{b.name}</p>
                 <p
@@ -182,55 +199,57 @@ export default async function DashboardPage() {
             ))}
           </div>
 
-          {/* Análisis del mes */}
-          {(topExpense.length > 0 || topIncome.length > 0) && (
-            <>
-              <SectionHeader title="Análisis del mes" />
-              <div className="mb-7 space-y-3">
-                <CategoryBreakdown
-                  title="Gastos por categoría"
-                  items={topExpense}
-                  type="expense"
-                />
-                <CategoryBreakdown
-                  title="Ingresos por categoría"
-                  items={topIncome}
-                  type="income"
-                />
-              </div>
-            </>
-          )}
+          <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
+            {(topExpense.length > 0 || topIncome.length > 0) && (
+              <section>
+                <SectionHeader title="Análisis del mes" />
+                <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 xl:grid-cols-1 xl:space-y-3">
+                  <CategoryBreakdown
+                    title="Gastos por categoría"
+                    items={topExpense}
+                    type="expense"
+                  />
+                  <CategoryBreakdown
+                    title="Ingresos por categoría"
+                    items={topIncome}
+                    type="income"
+                  />
+                </div>
+              </section>
+            )}
 
-          {/* Movimientos recientes */}
-          <SectionHeader title="Recientes" href="/movimientos" />
-          <ul className="divide-y divide-white/[0.05]">
-            {recent.map((t) => {
-              const meta = getTransactionMeta(t.type)
-              const label =
-                t.type === 'transfer'
-                  ? `${accountName.get(t.account_id) ?? ''} → ${
-                      t.to_account_id ? accountName.get(t.to_account_id) ?? '' : ''
-                    }`
-                  : t.category_id
-                    ? categoryLabel(t.category_id, categoryName, categoryParent, meta.label)
-                    : meta.label
-              const imagePath = accountImagePath.get(t.account_id)
-              return (
-                <TransactionRow
-                  key={t.id}
-                  type={t.type}
-                  label={label}
-                  sublabel={`${accountName.get(t.account_id) ?? ''} · ${formatDay(
-                    t.occurred_at
-                  )}${t.note ? ` · ${t.note}` : ''}`}
-                  amount={Number(t.amount)}
-                  accountName={accountName.get(t.account_id)}
-                  accountType={accountType.get(t.account_id)}
-                  accountImageUrl={imagePath ? accountImageUrl.get(imagePath) : null}
-                />
-              )
-            })}
-          </ul>
+            <section className="min-w-0">
+              <SectionHeader title="Recientes" href="/movimientos" />
+              <ul className="divide-y divide-white/[0.05] rounded-3xl border border-white/[0.06] bg-white/[0.02] px-4 lg:px-5">
+                {recent.map((t) => {
+                  const meta = getTransactionMeta(t.type)
+                  const label =
+                    t.type === 'transfer'
+                      ? `${accountName.get(t.account_id) ?? ''} → ${
+                          t.to_account_id ? accountName.get(t.to_account_id) ?? '' : ''
+                        }`
+                      : t.category_id
+                        ? categoryLabel(t.category_id, categoryName, categoryParent, meta.label)
+                        : meta.label
+                  const imagePath = accountImagePath.get(t.account_id)
+                  return (
+                    <TransactionRow
+                      key={t.id}
+                      type={t.type}
+                      label={label}
+                      sublabel={`${accountName.get(t.account_id) ?? ''} · ${formatDay(
+                        t.occurred_at
+                      )}${t.note ? ` · ${t.note}` : ''}`}
+                      amount={Number(t.amount)}
+                      accountName={accountName.get(t.account_id)}
+                      accountType={accountType.get(t.account_id)}
+                      accountImageUrl={imagePath ? accountImageUrl.get(imagePath) : null}
+                    />
+                  )
+                })}
+              </ul>
+            </section>
+          </div>
         </>
       )}
 

@@ -49,8 +49,16 @@ export function formatLongDate(value: string): string {
 
 /** Rango del mes actual en ISO (para consultas). */
 export function currentMonthRange(now = new Date()) {
-  const start = new Date(now.getFullYear(), now.getMonth(), 1)
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: 'numeric',
+    timeZone: 'America/Bogota',
+  }).formatToParts(now)
+  const year = Number(parts.find((part) => part.type === 'year')?.value)
+  const monthIndex = Number(parts.find((part) => part.type === 'month')?.value) - 1
+  // Colombia permanece en UTC-5. Las 05:00 UTC corresponden a medianoche local.
+  const start = new Date(Date.UTC(year, monthIndex, 1, 5))
+  const end = new Date(Date.UTC(year, monthIndex + 1, 1, 5))
   return { start: start.toISOString(), end: end.toISOString() }
 }
 
