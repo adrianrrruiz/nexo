@@ -5,7 +5,7 @@
 
 export type AccountType = 'debit' | 'savings' | 'credit' | 'cash'
 export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment'
-export type TransactionSource = 'manual' | 'import' | 'email'
+export type TransactionSource = 'manual' | 'import' | 'email' | 'shortcut'
 export type CategoryKind = 'income' | 'expense'
 
 export type Profile = {
@@ -70,6 +70,16 @@ export type AccountBalance = {
   credit_limit: number | null
   image_path: string | null
   balance: number
+}
+
+export type ShortcutToken = {
+  id: string
+  user_id: string
+  name: string
+  token_hash: string
+  last_used_at: string | null
+  revoked_at: string | null
+  created_at: string
 }
 
 export interface Database {
@@ -163,6 +173,20 @@ export interface Database {
           source_file: string | null
           row_count: number
         }>
+        Relationships: []
+      }
+      shortcut_tokens: {
+        Row: ShortcutToken
+        Insert: {
+          id?: string
+          user_id: string
+          name?: string
+          token_hash: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          created_at?: string
+        }
+        Update: Partial<ShortcutToken>
         Relationships: []
       }
     }

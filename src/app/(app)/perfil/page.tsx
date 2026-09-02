@@ -2,8 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createProfileAvatarUrl } from '@/lib/account-images'
 import ProfileAvatarUploader from '@/components/ProfileAvatarUploader'
 import ProfileForm from '@/components/ProfileForm'
+import ShortcutIntegration from '@/components/ShortcutIntegration'
 import Logo from '@/components/Logo'
-import type { Profile } from '@/lib/supabase/types'
+import type { Profile, ShortcutToken } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,11 +13,20 @@ export default async function PerfilPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  const { data: profileData } = user
-    ? await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
-    : { data: null }
+  const [profileRes, shortcutRes] = user
+    ? await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabase
+          .from('shortcut_tokens')
+          .select('*')
+          .eq('user_id', user.id)
+          .is('revoked_at', null)
+          .maybeSingle(),
+      ])
+    : [{ data: null }, { data: null }]
 
-  const profile = profileData as Profile | null
+  const profile = profileRes.data as Profile | null
+  const shortcutToken = shortcutRes.data as ShortcutToken | null
   const avatarUrl = await createProfileAvatarUrl(profile?.avatar_path ?? null)
 
   const email = user?.email ?? ''
@@ -66,6 +76,14 @@ export default async function PerfilPage() {
             </button>
           </form>
         </div>
+      </div>
+
+      <div className="mx-auto max-w-4xl">
+        <ShortcutIntegration
+          active={Boolean(shortcutToken)}
+          createdAt={shortcutToken?.created_at}
+          lastUsedAt={shortcutToken?.last_used_at}
+        />
       </div>
     </>
   )

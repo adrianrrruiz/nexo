@@ -11,7 +11,7 @@ export async function updateSession(request: NextRequest) {
 
   // El MCP remoto no usa la cookie de la PWA. Su Route Handler valida un
   // Bearer token propio antes de permitir cualquier consulta financiera.
-  if (pathname.startsWith('/api/mcp')) {
+  if (pathname.startsWith('/api/mcp') || pathname.startsWith('/api/shortcuts')) {
     return NextResponse.next({ request })
   }
 

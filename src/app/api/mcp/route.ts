@@ -76,7 +76,7 @@ const handler = createMcpHandler(
             .optional()
             .describe('Tipo de movimiento.'),
           source: z
-            .enum(['manual', 'import', 'email'])
+            .enum(['manual', 'import', 'email', 'shortcut'])
             .optional()
             .describe('Origen del registro.'),
           account_id: z.string().uuid().optional().describe('ID exacto de una cuenta.'),
