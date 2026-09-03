@@ -5,7 +5,7 @@ import { formatCOP, formatDay, currentMonthRange } from '@/lib/format'
 import { describeDueDate, todayInBogota } from '@/lib/subscriptions'
 import QuickEntry from '@/components/QuickEntry'
 import Logo from '@/components/Logo'
-import TransactionRow from '@/components/TransactionRow'
+import EditableTransactionRow from '@/components/EditableTransactionRow'
 import SubscriptionDueList, {
   type DueSubscription,
 } from '@/components/SubscriptionDueList'
@@ -278,14 +278,15 @@ export default async function DashboardPage() {
                         : meta.label
                   const imagePath = accountImagePath.get(t.account_id)
                   return (
-                    <TransactionRow
+                    <EditableTransactionRow
                       key={t.id}
-                      type={t.type}
+                      transaction={t}
+                      accounts={accounts}
+                      categories={categories}
                       label={label}
                       sublabel={`${accountName.get(t.account_id) ?? ''} · ${formatDay(
                         t.occurred_at
                       )}${t.note ? ` · ${t.note}` : ''}`}
-                      amount={Number(t.amount)}
                       accountName={accountName.get(t.account_id)}
                       accountType={accountType.get(t.account_id)}
                       accountImageUrl={imagePath ? accountImageUrl.get(imagePath) : null}
