@@ -1,6 +1,7 @@
 'use client'
 
 import { formatLongDate } from '@/lib/format'
+import { openNativePicker } from '@/lib/native-picker'
 
 export default function DateTextField({
   name,
@@ -27,6 +28,15 @@ export default function DateTextField({
         name={name}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onClick={(event) => openNativePicker(event.currentTarget)}
+        onKeyDown={(event) => {
+          // el input está transparente: sin esto no habría forma de abrirlo
+          // desde el teclado.
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            openNativePicker(event.currentTarget)
+          }
+        }}
         aria-label={label}
         className="peer absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none opacity-0"
       />

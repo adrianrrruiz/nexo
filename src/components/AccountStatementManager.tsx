@@ -8,6 +8,7 @@ import {
   MAX_STATEMENT_SIZE_BYTES,
 } from '@/lib/statement-config'
 import type { AccountStatement } from '@/lib/supabase/types'
+import { openNativePicker } from '@/lib/native-picker'
 
 const FIELD =
   'w-full rounded-2xl border border-white/[0.08] bg-white/[0.05] px-4 py-3 text-sm outline-none focus:border-brand/60'
@@ -161,6 +162,7 @@ export default function AccountStatementManager({
             required
             value={period}
             onChange={(event) => setPeriod(event.target.value)}
+            onClick={(event) => openNativePicker(event.currentTarget)}
             className={`${FIELD} mt-2`}
           />
         </label>
