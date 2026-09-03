@@ -3,7 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import type { AccountType } from '@/lib/supabase/types'
-import { isSupportedBank } from '@/lib/banks'
+import {
+  getDefaultAccountImagePath,
+  isDefaultAccountImage,
+  isSupportedBank,
+} from '@/lib/banks'
 
 export type AccountState = { ok: boolean; message: string } | null
 
@@ -45,6 +49,7 @@ export async function createAccount(
     name,
     type,
     bank,
+    image_path: getDefaultAccountImagePath(bank, type),
     initial_balance,
     credit_limit,
   })
@@ -77,9 +82,25 @@ export async function updateAccount(
     return { ok: false, message: 'Selecciona un banco compatible.' }
   }
 
+  const { data: currentAccount, error: lookupError } = await supabase
+    .from('accounts')
+    .select('image_path')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (lookupError || !currentAccount) {
+    return { ok: false, message: 'No se pudo consultar la cuenta.' }
+  }
+
+  const image_path =
+    !currentAccount.image_path || isDefaultAccountImage(currentAccount.image_path)
+      ? getDefaultAccountImagePath(bank, type)
+      : currentAccount.image_path
+
   const { error } = await supabase
     .from('accounts')
-    .update({ name, type, bank, credit_limit })
+    .update({ name, type, bank, credit_limit, image_path })
     .eq('id', id)
     .eq('user_id', userId)
 
