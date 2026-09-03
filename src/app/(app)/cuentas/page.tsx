@@ -176,6 +176,17 @@ export default async function CuentasPage() {
                         {formatCOP(Number(b.balance))}
                       </p>
                     </Link>
+                    <Link
+                      href={`/cuentas/${b.id}/extractos`}
+                      aria-label={`Ver extractos de ${b.name}`}
+                      title="Extractos"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-neutral-400 transition-colors hover:text-brand"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+                        <path d="M14 3v5h5M8 14h8M8 17h6" />
+                      </svg>
+                    </Link>
                     <EditAccountButton account={b} />
                   </article>
                 ))}

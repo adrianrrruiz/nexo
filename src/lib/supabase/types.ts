@@ -85,6 +85,18 @@ export type ShortcutToken = {
   created_at: string
 }
 
+export type AccountStatement = {
+  id: string
+  user_id: string
+  account_id: string
+  period: string
+  original_filename: string
+  storage_path: string
+  mime_type: 'application/pdf'
+  size_bytes: number
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -191,6 +203,22 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<ShortcutToken>
+        Relationships: []
+      }
+      account_statements: {
+        Row: AccountStatement
+        Insert: {
+          id?: string
+          user_id: string
+          account_id: string
+          period: string
+          original_filename: string
+          storage_path: string
+          mime_type?: 'application/pdf'
+          size_bytes: number
+          created_at?: string
+        }
+        Update: Partial<AccountStatement>
         Relationships: []
       }
     }
