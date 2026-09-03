@@ -4,6 +4,7 @@
 // Por ahora se mantienen a mano para tener tipado en la app.
 
 export type AccountType = 'debit' | 'savings' | 'credit' | 'cash'
+export type SupportedBank = 'nequi' | 'rappi' | 'nu'
 export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment'
 export type TransactionSource = 'manual' | 'import' | 'email' | 'shortcut'
 export type CategoryKind = 'income' | 'expense'
@@ -21,6 +22,7 @@ export type Account = {
   user_id: string
   name: string
   type: AccountType
+  bank: SupportedBank
   currency: string
   initial_balance: number
   credit_limit: number | null
@@ -66,6 +68,7 @@ export type AccountBalance = {
   user_id: string
   name: string
   type: AccountType
+  bank: SupportedBank
   currency: string
   credit_limit: number | null
   image_path: string | null
@@ -104,6 +107,7 @@ export interface Database {
           user_id: string
           name: string
           type?: AccountType
+          bank: SupportedBank
           currency?: string
           initial_balance?: number
           credit_limit?: number | null
@@ -199,6 +203,7 @@ export interface Database {
     Functions: Record<never, never>
     Enums: {
       account_type: AccountType
+      supported_bank: SupportedBank
       transaction_type: TransactionType
       transaction_source: TransactionSource
       category_kind: CategoryKind

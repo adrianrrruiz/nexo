@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
   const { data: accounts, error } = await auth.admin
     .from('accounts')
-    .select('id,name,type')
+    .select('id,name,type,bank')
     .eq('user_id', auth.userId)
     .eq('archived', false)
     .order('name')

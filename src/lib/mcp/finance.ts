@@ -367,7 +367,7 @@ export async function listAccounts(userId: string, includeArchived = false) {
   const [balancesResult, accountsResult] = await Promise.all([
     getAdminClient()
       .from('account_balances')
-      .select('id,name,type,currency,credit_limit,balance')
+      .select('id,name,type,bank,currency,credit_limit,balance')
       .eq('user_id', userId),
     getAdminClient()
       .from('accounts')
@@ -391,13 +391,14 @@ export async function listAccounts(userId: string, includeArchived = false) {
 
   return ((balancesResult.data ?? []) as Pick<
     AccountBalance,
-    'id' | 'name' | 'type' | 'currency' | 'credit_limit' | 'balance'
+    'id' | 'name' | 'type' | 'bank' | 'currency' | 'credit_limit' | 'balance'
   >[])
     .filter((account) => includeArchived || !archivedById.get(account.id))
     .map((account) => ({
       id: account.id,
       name: account.name,
       type: account.type,
+      bank: account.bank,
       currency: account.currency,
       balance: roundMoney(Number(account.balance)),
       credit_limit:

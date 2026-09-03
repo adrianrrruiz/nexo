@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import type { AccountType } from '@/lib/supabase/types'
+import { isSupportedBank } from '@/lib/banks'
 
 export type AccountState = { ok: boolean; message: string } | null
 
@@ -23,21 +24,27 @@ export async function createAccount(
   _prev: AccountState,
   formData: FormData
 ): Promise<AccountState> {
+  void _prev
   const { supabase, userId } = await getUserId()
   if (!userId) return { ok: false, message: 'Sesión expirada.' }
 
   const name = String(formData.get('name') ?? '').trim()
   const type = String(formData.get('type') ?? 'debit') as AccountType
+  const bank = String(formData.get('bank') ?? '')
   const initial_balance = parseAmount(formData.get('initial_balance'))
   const credit_limit =
     type === 'credit' ? parseAmount(formData.get('credit_limit')) || null : null
 
   if (!name) return { ok: false, message: 'Escribe el nombre de la cuenta.' }
+  if (!isSupportedBank(bank)) {
+    return { ok: false, message: 'Selecciona un banco compatible.' }
+  }
 
   const { error } = await supabase.from('accounts').insert({
     user_id: userId,
     name,
     type,
+    bank,
     initial_balance,
     credit_limit,
   })
@@ -53,21 +60,26 @@ export async function updateAccount(
   _prev: AccountState,
   formData: FormData
 ): Promise<AccountState> {
+  void _prev
   const { supabase, userId } = await getUserId()
   if (!userId) return { ok: false, message: 'Sesión expirada.' }
 
   const id = String(formData.get('id') ?? '')
   const name = String(formData.get('name') ?? '').trim()
   const type = String(formData.get('type') ?? 'debit') as AccountType
+  const bank = String(formData.get('bank') ?? '')
   const credit_limit =
     type === 'credit' ? parseAmount(formData.get('credit_limit')) || null : null
 
   if (!id) return { ok: false, message: 'Cuenta inválida.' }
   if (!name) return { ok: false, message: 'Escribe el nombre de la cuenta.' }
+  if (!isSupportedBank(bank)) {
+    return { ok: false, message: 'Selecciona un banco compatible.' }
+  }
 
   const { error } = await supabase
     .from('accounts')
-    .update({ name, type, credit_limit })
+    .update({ name, type, bank, credit_limit })
     .eq('id', id)
     .eq('user_id', userId)
 
@@ -82,6 +94,7 @@ export async function archiveAccount(
   _prev: AccountState,
   formData: FormData
 ): Promise<AccountState> {
+  void _prev
   const { supabase, userId } = await getUserId()
   if (!userId) return { ok: false, message: 'Sesión expirada.' }
 

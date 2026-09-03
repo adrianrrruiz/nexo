@@ -8,6 +8,7 @@ import {
   type AccountState,
 } from '@/app/(app)/cuentas/actions'
 import type { AccountBalance, AccountType } from '@/lib/supabase/types'
+import { SUPPORTED_BANKS } from '@/lib/banks'
 
 const FIELD =
   'w-full rounded-2xl border border-white/[0.06] bg-white/[0.05] px-4 py-3.5 text-base outline-none focus:border-brand/60'
@@ -107,6 +108,21 @@ function AccountForm({
                 placeholder="Nombre"
                 className={FIELD}
               />
+              <select
+                name="bank"
+                required
+                defaultValue={account?.bank ?? ''}
+                className={FIELD}
+              >
+                <option value="" disabled>
+                  Banco
+                </option>
+                {SUPPORTED_BANKS.map((bank) => (
+                  <option key={bank.value} value={bank.value}>
+                    {bank.label}
+                  </option>
+                ))}
+              </select>
               <select
                 name="type"
                 value={type}

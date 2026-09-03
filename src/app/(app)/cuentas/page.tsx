@@ -6,6 +6,7 @@ import AccountAvatar from '@/components/AccountAvatar'
 import AccountImageUploader from '@/components/AccountImageUploader'
 import { EditAccountButton, NewAccountButton } from '@/components/AccountManager'
 import type { AccountBalance, AccountType } from '@/lib/supabase/types'
+import { BANK_LABEL } from '@/lib/banks'
 
 export const dynamic = 'force-dynamic'
 
@@ -161,6 +162,7 @@ export default async function CuentasPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{b.name}</p>
                         <p className="text-xs text-neutral-500">
+                          {BANK_LABEL[b.bank]} ·{' '}
                           {b.type === 'credit' && b.credit_limit
                             ? `Cupo ${formatCOP(Number(b.credit_limit))}`
                             : b.currency}
