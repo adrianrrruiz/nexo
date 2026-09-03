@@ -6,8 +6,15 @@
 export type AccountType = 'debit' | 'savings' | 'credit' | 'cash'
 export type SupportedBank = 'nequi' | 'rappi' | 'nu'
 export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment'
-export type TransactionSource = 'manual' | 'import' | 'email' | 'shortcut'
+export type TransactionSource = 'manual' | 'import' | 'email' | 'shortcut' | 'subscription'
 export type CategoryKind = 'income' | 'expense'
+export type SubscriptionFrequency =
+  | 'weekly'
+  | 'monthly'
+  | 'bimonthly'
+  | 'quarterly'
+  | 'semiannual'
+  | 'yearly'
 
 export type Profile = {
   id: string
@@ -59,6 +66,7 @@ export type Transaction = {
   source: TransactionSource
   external_ref: string | null
   import_batch_id: string | null
+  subscription_id: string | null
   created_at: string
   updated_at: string
 }
@@ -95,6 +103,23 @@ export type AccountStatement = {
   mime_type: 'application/pdf'
   size_bytes: number
   created_at: string
+}
+
+export type Subscription = {
+  id: string
+  user_id: string
+  name: string
+  amount: number
+  account_id: string
+  category_id: string | null
+  frequency: SubscriptionFrequency
+  started_on: string
+  next_charge_on: string
+  last_charged_on: string | null
+  note: string | null
+  active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface Database {
@@ -164,6 +189,7 @@ export interface Database {
           source?: TransactionSource
           external_ref?: string | null
           import_batch_id?: string | null
+          subscription_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -221,6 +247,27 @@ export interface Database {
         Update: Partial<AccountStatement>
         Relationships: []
       }
+      subscriptions: {
+        Row: Subscription
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          amount: number
+          account_id: string
+          category_id?: string | null
+          frequency?: SubscriptionFrequency
+          started_on: string
+          next_charge_on: string
+          last_charged_on?: string | null
+          note?: string | null
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Subscription>
+        Relationships: []
+      }
     }
     Views: {
       account_balances: {
@@ -235,6 +282,7 @@ export interface Database {
       transaction_type: TransactionType
       transaction_source: TransactionSource
       category_kind: CategoryKind
+      subscription_frequency: SubscriptionFrequency
     }
     CompositeTypes: Record<never, never>
   }

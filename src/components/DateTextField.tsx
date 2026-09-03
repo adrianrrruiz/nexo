@@ -6,10 +6,12 @@ export default function DateTextField({
   name,
   value,
   onChange,
+  label = 'Fecha del movimiento',
 }: {
   name: string
   value: string
   onChange: (value: string) => void
+  label?: string
 }) {
   return (
     <div className="relative">
@@ -25,7 +27,7 @@ export default function DateTextField({
         name={name}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        aria-label="Fecha del movimiento"
+        aria-label={label}
         className="peer absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none opacity-0"
       />
       <div className="pointer-events-none flex w-full items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.05] px-4 py-3.5 text-left text-base text-neutral-100 transition-colors peer-focus:border-brand/60">

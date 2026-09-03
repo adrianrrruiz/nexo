@@ -25,6 +25,19 @@ const ITEMS = [
     ),
   },
   {
+    href: '/suscripciones',
+    label: 'Suscripciones',
+    icon: (
+      <>
+        <path d="M12 3v18" />
+        <path d="M20 8.5A8 8 0 0 0 5.5 6" />
+        <path d="M4 15.5A8 8 0 0 0 18.5 18" />
+        <path d="M5.5 3v3h3" />
+        <path d="M18.5 21v-3h-3" />
+      </>
+    ),
+  },
+  {
     href: '/cuentas',
     label: 'Cuentas',
     icon: (
@@ -81,11 +94,17 @@ export default function BottomNav() {
           <div className="pointer-events-none absolute inset-x-3 top-0 h-px bg-white/35" />
           <div className="pointer-events-none absolute -left-8 top-0 h-16 w-24 rounded-full bg-white/10 blur-2xl" />
           <div className="pointer-events-none absolute -right-8 bottom-0 h-16 w-24 rounded-full bg-brand/10 blur-2xl" />
-          <div className="relative grid grid-cols-4">
+          <div
+            className="relative grid"
+            style={{ gridTemplateColumns: `repeat(${ITEMS.length}, minmax(0, 1fr))` }}
+          >
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 left-0 w-1/4 p-1 transition-transform duration-300 ease-out"
-              style={{ transform: `translateX(${currentIndex * 100}%)` }}
+              className="pointer-events-none absolute inset-y-0 left-0 p-1 transition-transform duration-300 ease-out"
+              style={{
+                width: `${100 / ITEMS.length}%`,
+                transform: `translateX(${currentIndex * 100}%)`,
+              }}
             >
               <div className="h-full w-full rounded-full bg-white/[0.13] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]" />
             </div>
@@ -119,7 +138,7 @@ function NavLink({
                 ? 'bg-brand/[0.12] text-brand shadow-[inset_0_0_0_1px_rgba(29,205,159,0.16)]'
                 : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-100'
             }`
-          : `relative z-10 flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 transition-colors duration-200 ${
+          : `relative z-10 flex min-w-0 flex-col items-center gap-0.5 rounded-full px-1.5 py-1.5 transition-colors duration-200 ${
               active ? 'text-brand' : 'text-neutral-400 hover:text-neutral-100'
             }`
       }
@@ -137,7 +156,13 @@ function NavLink({
       >
         {item.icon}
       </svg>
-      <span className={desktop ? '' : 'text-[10px] font-medium'}>{item.label}</span>
+      <span
+        className={
+          desktop ? '' : 'w-full truncate text-center text-[10px] font-medium'
+        }
+      >
+        {item.label}
+      </span>
     </Link>
   )
 }

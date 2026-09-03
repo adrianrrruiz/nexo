@@ -54,8 +54,8 @@ export function categoryIdsInGroup(
     .map((category) => category.id)
 }
 
-export function sortCategoriesForSelect(categories: CategoryLite[]) {
-  const childrenByParent = new Map<string, CategoryLite[]>()
+export function sortCategoriesForSelect<T extends CategoryLite>(categories: T[]): T[] {
+  const childrenByParent = new Map<string, T[]>()
   const parents = categories.filter((category) => !category.parent_id)
 
   for (const category of categories) {

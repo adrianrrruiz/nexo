@@ -3,9 +3,10 @@
 import { useActionState, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { addTransaction, type EntryState } from '@/app/(app)/dashboard/actions'
+import AmountField from '@/components/AmountField'
 import DateTextField from '@/components/DateTextField'
 import { sortCategoriesForSelect } from '@/lib/categories'
-import { formatCOPFromCents, formatDateInputValue } from '@/lib/format'
+import { formatDateInputValue } from '@/lib/format'
 import { createClient } from '@/lib/supabase/client'
 import type { Account, Category, TransactionType } from '@/lib/supabase/types'
 
@@ -184,49 +185,7 @@ export default function QuickEntry({
 
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="type" value={type} />
-          <input
-            type="hidden"
-            name="amount"
-            value={amountCents ? (Number(amountCents) / 100).toFixed(2) : ''}
-          />
-
-          <input
-            type="text"
-            inputMode="numeric"
-            required
-            placeholder="$ 0,00"
-            value={amountCents ? formatCOPFromCents(amountCents) : ''}
-            onKeyDown={(event) => {
-              if (/^\d$/.test(event.key)) {
-                event.preventDefault()
-                const hasSelection =
-                  event.currentTarget.selectionStart !== event.currentTarget.selectionEnd
-                setAmountCents((current) =>
-                  `${hasSelection ? '' : current}${event.key}`.replace(/^0+(?=\d)/, '')
-                )
-                return
-              }
-              if (event.key === 'Backspace' || event.key === 'Delete') {
-                event.preventDefault()
-                const hasSelection =
-                  event.currentTarget.selectionStart !== event.currentTarget.selectionEnd
-                setAmountCents((current) => (hasSelection ? '' : current.slice(0, -1)))
-              }
-            }}
-            onChange={(event) => {
-              const digits = event.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '')
-              setAmountCents(digits)
-            }}
-            onPaste={(event) => {
-              event.preventDefault()
-              const digits = event.clipboardData
-                .getData('text')
-                .replace(/\D/g, '')
-                .replace(/^0+(?=\d)/, '')
-              setAmountCents(digits)
-            }}
-            className={`${FIELD} text-lg font-semibold`}
-          />
+          <AmountField name="amount" value={amountCents} onChange={setAmountCents} />
 
           <div className="flex gap-2">
             <select name="account_id" required className={FIELD}>

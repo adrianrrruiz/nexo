@@ -2,9 +2,13 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP, formatDay, currentMonthRange } from '@/lib/format'
+import { describeDueDate, todayInBogota } from '@/lib/subscriptions'
 import QuickEntry from '@/components/QuickEntry'
 import Logo from '@/components/Logo'
 import TransactionRow from '@/components/TransactionRow'
+import SubscriptionDueList, {
+  type DueSubscription,
+} from '@/components/SubscriptionDueList'
 import DeveloperFooter from '@/components/DeveloperFooter'
 import { createAccountImageUrlMap, createProfileAvatarUrl } from '@/lib/account-images'
 import {
@@ -19,6 +23,7 @@ import type {
   Account,
   Category,
   Profile,
+  Subscription,
   Transaction,
   TransactionType,
 } from '@/lib/supabase/types'
@@ -34,27 +39,43 @@ export default async function DashboardPage() {
 
   const { start, end } = currentMonthRange()
 
-  const [profileRes, balancesRes, accountsRes, categoriesRes, recentRes, monthRes] =
-    await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-      supabase.from('account_balances').select('*'),
-      supabase.from('accounts').select('id,name,type,image_path').eq('archived', false),
-      supabase
-        .from('categories')
-        .select('id,name,kind,parent_id')
-        .eq('user_id', user.id)
-        .eq('is_suggested', false),
-      supabase
-        .from('transactions')
-        .select('*')
-        .order('occurred_at', { ascending: false })
-        .limit(8),
-      supabase
-        .from('transactions')
-        .select('amount,type,category_id')
-        .gte('occurred_at', start)
-        .lt('occurred_at', end),
-    ])
+  const today = todayInBogota()
+
+  const [
+    profileRes,
+    balancesRes,
+    accountsRes,
+    categoriesRes,
+    recentRes,
+    monthRes,
+    dueRes,
+  ] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+    supabase.from('account_balances').select('*'),
+    supabase.from('accounts').select('id,name,type,image_path').eq('archived', false),
+    supabase
+      .from('categories')
+      .select('id,name,kind,parent_id')
+      .eq('user_id', user.id)
+      .eq('is_suggested', false),
+    supabase
+      .from('transactions')
+      .select('*')
+      .order('occurred_at', { ascending: false })
+      .limit(8),
+    supabase
+      .from('transactions')
+      .select('amount,type,category_id')
+      .gte('occurred_at', start)
+      .lt('occurred_at', end),
+    supabase
+      .from('subscriptions')
+      .select('id,name,amount,account_id,category_id,next_charge_on')
+      .eq('user_id', user.id)
+      .eq('active', true)
+      .lte('next_charge_on', today)
+      .order('next_charge_on'),
+  ])
 
   const queryError = [
     profileRes.error,
@@ -63,6 +84,7 @@ export default async function DashboardPage() {
     categoriesRes.error,
     recentRes.error,
     monthRes.error,
+    dueRes.error,
   ].find(Boolean)
   if (queryError) {
     throw new Error(`No se pudieron cargar los datos financieros: ${queryError.message}`)
@@ -86,6 +108,10 @@ export default async function DashboardPage() {
     Transaction,
     'amount' | 'type' | 'category_id'
   >[]
+  const dueSubscriptions = (dueRes.data ?? []) as Pick<
+    Subscription,
+    'id' | 'name' | 'amount' | 'account_id' | 'category_id' | 'next_charge_on'
+  >[]
 
   const accountName = new Map(accounts.map((a) => [a.id, a.name]))
   const accountType = new Map(accounts.map((a) => [a.id, a.type]))
@@ -94,6 +120,18 @@ export default async function DashboardPage() {
   const profileAvatarUrl = await createProfileAvatarUrl(profile?.avatar_path ?? null)
   const categoryName = new Map(categories.map((c) => [c.id, c.name]))
   const categoryParent = new Map(categories.map((c) => [c.id, c.parent_id]))
+
+  const dueItems: DueSubscription[] = dueSubscriptions.map((subscription) => ({
+    id: subscription.id,
+    name: subscription.name,
+    amount: Number(subscription.amount),
+    accountName: accountName.get(subscription.account_id) ?? 'Cuenta archivada',
+    categoryLabel: subscription.category_id
+      ? categoryLabel(subscription.category_id, categoryName, categoryParent, '')
+      : null,
+    dueLabel: describeDueDate(subscription.next_charge_on, today),
+    overdue: subscription.next_charge_on < today,
+  }))
 
   const netWorth = balances.reduce((s, b) => s + Number(b.balance), 0)
   const monthIncome = month
@@ -163,6 +201,13 @@ export default async function DashboardPage() {
           <span className="ml-auto text-emerald-950/60">este mes</span>
         </div>
       </section>
+
+      {dueItems.length > 0 && (
+        <section className="mb-8">
+          <SectionHeader title="Suscripciones por registrar" href="/suscripciones" />
+          <SubscriptionDueList items={dueItems} />
+        </section>
+      )}
 
       {noData ? (
         <EmptyState />
