@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { formatCOP, formatDateInputValue, formatDay, formatMonth } from '@/lib/format'
+import { formatCOP, formatDateInputValue, formatDay, formatLongDate, formatMonth } from '@/lib/format'
 import QuickEntry from '@/components/QuickEntry'
 import MovementAccountFilter from '@/components/MovementAccountFilter'
 import EditableTransactionRow from '@/components/EditableTransactionRow'
@@ -17,11 +17,17 @@ import { getTransactionMeta } from '@/lib/transaction-meta'
 import type { Account, Category, Transaction, TransactionType } from '@/lib/supabase/types'
 
 /** Construye la URL de movimientos filtrada por categoría, conservando la cuenta. */
-function categoriaHref(categoriaId: string, accountId: string) {
+function categoriaHref(categoriaId: string, accountId: string, showReconciled: boolean) {
   const params = new URLSearchParams()
   if (accountId) params.set('cuenta', accountId)
-  params.set('categoria', categoriaId)
+  if (categoriaId) params.set('categoria', categoriaId)
+  if (showReconciled) params.set('anteriores', '1')
   return `/movimientos?${params.toString()}`
+}
+
+function dayAfterInBogota(date: string): string {
+  const [year, month, day] = date.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day + 1, 5)).toISOString()
 }
 
 export const dynamic = 'force-dynamic'
@@ -29,21 +35,24 @@ export const dynamic = 'force-dynamic'
 export default async function MovimientosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cuenta?: string; categoria?: string }>
+  searchParams: Promise<{ cuenta?: string; categoria?: string; anteriores?: string }>
 }) {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  const { cuenta, categoria } = await searchParams
+  const { cuenta, categoria, anteriores } = await searchParams
   const selectedAccountId = cuenta ?? ''
   const selectedCategoryId = categoria ?? ''
 
   // Cuentas y categorías primero: el filtro por categoría necesita resolver
   // los ids del grupo (padre + subcategorías) antes de consultar movimientos.
   const [accountsRes, categoriesRes] = await Promise.all([
-    supabase.from('accounts').select('id,name,type,image_path').eq('archived', false),
+    supabase
+      .from('accounts')
+      .select('id,name,type,image_path,reconciled_through,reconciliation_note')
+      .eq('archived', false),
     supabase
       .from('categories')
       .select('id,name,kind,parent_id')
@@ -58,12 +67,18 @@ export default async function MovimientosPage({
 
   const accounts = (accountsRes.data ?? []) as Pick<
     Account,
-    'id' | 'name' | 'type' | 'image_path'
+    'id' | 'name' | 'type' | 'image_path' | 'reconciled_through' | 'reconciliation_note'
   >[]
   const categories = (categoriesRes.data ?? []) as Pick<
     Category,
     'id' | 'name' | 'kind' | 'parent_id'
   >[]
+  const selectedAccount = accounts.find((account) => account.id === selectedAccountId)
+  const reconciledThrough = selectedAccount?.reconciled_through ?? null
+  const showReconciled = Boolean(reconciledThrough && anteriores === '1')
+  const reconciliationBoundary = reconciledThrough
+    ? dayAfterInBogota(reconciledThrough)
+    : null
 
   let txQuery = supabase
     .from('transactions')
@@ -75,6 +90,12 @@ export default async function MovimientosPage({
     txQuery = txQuery.or(
       `account_id.eq.${selectedAccountId},to_account_id.eq.${selectedAccountId}`
     )
+  }
+
+  if (reconciliationBoundary) {
+    txQuery = showReconciled
+      ? txQuery.lt('occurred_at', reconciliationBoundary)
+      : txQuery.gte('occurred_at', reconciliationBoundary)
   }
 
   if (selectedCategoryId) {
@@ -133,13 +154,41 @@ export default async function MovimientosPage({
           accounts={accounts}
           selectedAccountId={selectedAccountId}
         />
+        {reconciledThrough && (
+          <div className="rounded-2xl border border-brand/20 bg-brand/[0.06] p-4 text-sm">
+            <p className="font-medium text-brand">
+              {showReconciled ? 'Movimientos conciliados' : 'Movimientos por revisar'}
+            </p>
+            <p className="mt-1 text-xs text-neutral-300">
+              {selectedAccount?.name} · conciliada hasta el {formatLongDate(reconciledThrough)}
+            </p>
+            {selectedAccount?.reconciliation_note && (
+              <p className="mt-1 whitespace-pre-wrap break-words text-xs text-neutral-300">
+                {selectedAccount.reconciliation_note}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-neutral-500">
+              {showReconciled
+                ? 'Estás viendo movimientos anteriores o del día conciliado.'
+                : 'Se muestran solo movimientos posteriores a la fecha conciliada.'}
+            </p>
+            <Link
+              href={categoriaHref(selectedCategoryId, selectedAccountId, !showReconciled)}
+              className="mt-2 inline-block text-xs font-semibold text-brand underline underline-offset-2"
+            >
+              {showReconciled ? 'Volver a pendientes' : 'Ver movimientos conciliados'}
+            </Link>
+          </div>
+        )}
         {selectedCategoryName && (
           <div className="flex items-center gap-2 text-xs text-neutral-500">
             <span>Categoría:</span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/30 bg-brand/10 py-1 pl-3 pr-1.5 font-medium text-brand">
               {selectedCategoryName}
               <Link
-                href={selectedAccountId ? `/movimientos?cuenta=${selectedAccountId}` : '/movimientos'}
+                href={selectedAccountId
+                  ? `/movimientos?cuenta=${selectedAccountId}${showReconciled ? '&anteriores=1' : ''}`
+                  : '/movimientos'}
                 aria-label="Quitar filtro de categoría"
                 scroll={false}
                 className="flex h-5 w-5 items-center justify-center rounded-full transition-colors hover:bg-brand/20"
@@ -164,12 +213,17 @@ export default async function MovimientosPage({
         <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center">
           <p className="text-neutral-300">
             {selectedAccountName
-              ? 'Sin movimientos para esta cuenta.'
+              ? showReconciled
+                ? 'Sin movimientos anteriores a la fecha conciliada.'
+                : reconciledThrough
+                  ? 'No hay movimientos pendientes después de la fecha conciliada.'
+                  : 'Sin movimientos para esta cuenta.'
               : 'Sin movimientos todavía.'}
           </p>
           <p className="mt-2 text-sm text-neutral-500">
-            Toca el botón <span className="font-semibold text-brand">+</span> para
-            registrar el primero.
+            {showReconciled
+              ? 'Puedes volver a los movimientos pendientes desde el filtro de arriba.'
+              : 'Toca el botón + para registrar un movimiento nuevo.'}
           </p>
         </div>
       ) : (
@@ -185,6 +239,7 @@ export default async function MovimientosPage({
                 categoryName={categoryName}
                 categoryParent={categoryParent}
                 accountId={selectedAccountId}
+                showReconciled={showReconciled}
               />
               <MonthTransactionList
                 transactions={list}
@@ -213,12 +268,14 @@ function MonthSummary({
   categoryName,
   categoryParent,
   accountId,
+  showReconciled,
 }: {
   month: string
   transactions: Transaction[]
   categoryName: Map<string, string>
   categoryParent: Map<string, string | null>
   accountId: string
+  showReconciled: boolean
 }) {
   const income = transactions
     .filter((t) => t.type === 'income')
@@ -246,8 +303,20 @@ function MonthSummary({
         </div>
       </div>
       <div className="space-y-4">
-        <MiniBreakdown title="Gastos" items={expenseByCat} type="expense" accountId={accountId} />
-        <MiniBreakdown title="Ingresos" items={incomeByCat} type="income" accountId={accountId} />
+        <MiniBreakdown
+          title="Gastos"
+          items={expenseByCat}
+          type="expense"
+          accountId={accountId}
+          showReconciled={showReconciled}
+        />
+        <MiniBreakdown
+          title="Ingresos"
+          items={incomeByCat}
+          type="income"
+          accountId={accountId}
+          showReconciled={showReconciled}
+        />
       </div>
     </div>
   )
@@ -387,11 +456,13 @@ function MiniBreakdown({
   items,
   type,
   accountId,
+  showReconciled,
 }: {
   title: string
   items: MiniItem[]
   type: Extract<TransactionType, 'income' | 'expense'>
   accountId: string
+  showReconciled: boolean
 }) {
   if (items.length === 0) return null
   const color = type === 'income' ? 'bg-brand' : 'bg-red-400'
@@ -402,7 +473,7 @@ function MiniBreakdown({
         {items.map((item) => (
           <Link
             key={item.id}
-            href={categoriaHref(item.id, accountId)}
+            href={categoriaHref(item.id, accountId, showReconciled)}
             aria-label={`Filtrar movimientos por ${item.name}`}
             className="group -mx-2 block rounded-lg px-2 py-1 transition-colors hover:bg-white/[0.05] active:bg-white/[0.08]"
           >

@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAccountImageUrlMap } from '@/lib/account-images'
-import { formatCOP } from '@/lib/format'
+import { formatCOP, formatLongDate } from '@/lib/format'
 import AccountAvatar from '@/components/AccountAvatar'
 import AccountImageUploader from '@/components/AccountImageUploader'
+import AccountReconciliation from '@/components/AccountReconciliation'
 import { EditAccountButton, NewAccountButton } from '@/components/AccountManager'
-import type { AccountBalance, AccountType } from '@/lib/supabase/types'
+import type { Account, AccountBalance, AccountType } from '@/lib/supabase/types'
 import { BANK_LABEL } from '@/lib/banks'
 
 export const dynamic = 'force-dynamic'
@@ -48,13 +49,21 @@ export default async function CuentasPage() {
   const supabase = await createClient()
   const [balancesRes, accountsRes] = await Promise.all([
     supabase.from('account_balances').select('*'),
-    supabase.from('accounts').select('id').eq('archived', false),
+    supabase
+      .from('accounts')
+      .select('id,reconciled_through,reconciliation_note')
+      .eq('archived', false),
   ])
   const queryError = balancesRes.error ?? accountsRes.error
   if (queryError) {
     throw new Error(`No se pudieron cargar los saldos de las cuentas: ${queryError.message}`)
   }
-  const activeAccountIds = new Set((accountsRes.data ?? []).map((account) => account.id))
+  const activeAccounts = (accountsRes.data ?? []) as Pick<
+    Account,
+    'id' | 'reconciled_through' | 'reconciliation_note'
+  >[]
+  const activeAccountIds = new Set(activeAccounts.map((account) => account.id))
+  const reconciliationById = new Map(activeAccounts.map((account) => [account.id, account]))
   const balances = ((balancesRes.data ?? []) as AccountBalance[]).filter((balance) =>
     activeAccountIds.has(balance.id)
   )
@@ -126,70 +135,100 @@ export default async function CuentasPage() {
                 {TYPE_LABEL[type] ?? type}
               </h2>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-                {list.map((b) => (
-                  <article
-                    key={b.id}
-                    className="flex items-center gap-4 rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4 transition-colors hover:border-brand/25 hover:bg-white/[0.05]"
-                  >
-                    <AccountImageUploader accountId={b.id}>
-                      {b.image_path ? (
-                        <AccountAvatar
-                          name={b.name}
-                          type={b.type}
-                          imageUrl={imageUrls.get(b.image_path)}
-                        />
-                      ) : (
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-5 w-5"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                {list.map((b) => {
+                  const reconciliation = reconciliationById.get(b.id)
+                  return (
+                    <article
+                      key={b.id}
+                      className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4 transition-colors hover:border-brand/25 hover:bg-white/[0.05]"
+                    >
+                      <div className="flex items-center gap-4">
+                        <AccountImageUploader accountId={b.id}>
+                          {b.image_path ? (
+                            <AccountAvatar
+                              name={b.name}
+                              type={b.type}
+                              imageUrl={imageUrls.get(b.image_path)}
+                            />
+                          ) : (
+                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                {TYPE_ICON[b.type]}
+                              </svg>
+                            </span>
+                          )}
+                        </AccountImageUploader>
+                        <Link
+                          href={`/movimientos?cuenta=${b.id}`}
+                          className="flex min-w-0 flex-1 items-center gap-3"
+                          aria-label={`Ver movimientos de ${b.name}`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{b.name}</p>
+                            <p className="text-xs text-neutral-500">
+                              {BANK_LABEL[b.bank]} ·{' '}
+                              {b.type === 'credit' && b.credit_limit
+                                ? `Cupo ${formatCOP(Number(b.credit_limit))}`
+                                : b.currency}
+                            </p>
+                          </div>
+                          <p
+                            className={`shrink-0 text-sm font-semibold tabular-nums ${
+                              Number(b.balance) < 0 ? 'text-red-400' : 'text-neutral-100'
+                            }`}
                           >
-                            {TYPE_ICON[b.type]}
+                            {formatCOP(Number(b.balance))}
+                          </p>
+                        </Link>
+                        <Link
+                          href={`/cuentas/${b.id}/extractos`}
+                          aria-label={`Ver extractos de ${b.name}`}
+                          title="Extractos"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-neutral-400 transition-colors hover:text-brand"
+                        >
+                          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+                            <path d="M14 3v5h5M8 14h8M8 17h6" />
                           </svg>
-                        </span>
-                      )}
-                    </AccountImageUploader>
-                    <Link
-                      href={`/movimientos?cuenta=${b.id}`}
-                      className="flex min-w-0 flex-1 items-center gap-3"
-                      aria-label={`Ver movimientos de ${b.name}`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{b.name}</p>
-                        <p className="text-xs text-neutral-500">
-                          {BANK_LABEL[b.bank]} ·{' '}
-                          {b.type === 'credit' && b.credit_limit
-                            ? `Cupo ${formatCOP(Number(b.credit_limit))}`
-                            : b.currency}
-                        </p>
+                        </Link>
+                        <EditAccountButton account={b} />
                       </div>
-                      <p
-                        className={`shrink-0 text-sm font-semibold tabular-nums ${
-                          Number(b.balance) < 0 ? 'text-red-400' : 'text-neutral-100'
-                        }`}
-                      >
-                        {formatCOP(Number(b.balance))}
-                      </p>
-                    </Link>
-                    <Link
-                      href={`/cuentas/${b.id}/extractos`}
-                      aria-label={`Ver extractos de ${b.name}`}
-                      title="Extractos"
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-neutral-400 transition-colors hover:text-brand"
-                    >
-                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
-                        <path d="M14 3v5h5M8 14h8M8 17h6" />
-                      </svg>
-                    </Link>
-                    <EditAccountButton account={b} />
-                  </article>
-                ))}
+                      <div className="mt-3 flex items-start justify-between gap-3 border-t border-white/[0.06] pt-3">
+                        <div className="min-w-0">
+                          {reconciliation?.reconciled_through ? (
+                            <>
+                              <p className="text-xs font-medium text-brand">
+                                Conciliada hasta el{' '}
+                                {formatLongDate(reconciliation.reconciled_through)}
+                              </p>
+                              {reconciliation.reconciliation_note && (
+                                <p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-xs text-neutral-400">
+                                  {reconciliation.reconciliation_note}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-xs text-neutral-500">Aún sin conciliar</p>
+                          )}
+                        </div>
+                        <AccountReconciliation
+                          accountId={b.id}
+                          accountName={b.name}
+                          reconciledThrough={reconciliation?.reconciled_through ?? null}
+                          note={reconciliation?.reconciliation_note ?? null}
+                        />
+                      </div>
+                    </article>
+                  )
+                })}
               </div>
             </section>
           ))}

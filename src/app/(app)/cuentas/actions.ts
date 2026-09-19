@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { formatDateInputValue } from '@/lib/format'
 import type { AccountType } from '@/lib/supabase/types'
 import {
   getDefaultAccountImagePath,
@@ -133,4 +134,57 @@ export async function archiveAccount(
   revalidatePath('/dashboard')
   revalidatePath('/movimientos')
   return { ok: true, message: 'Cuenta archivada.' }
+}
+
+export async function updateAccountReconciliation(
+  _prev: AccountState,
+  formData: FormData
+): Promise<AccountState> {
+  void _prev
+  const { supabase, userId } = await getUserId()
+  if (!userId) return { ok: false, message: 'Sesión expirada.' }
+
+  const id = String(formData.get('id') ?? '')
+  if (!id) return { ok: false, message: 'Cuenta inválida.' }
+
+  const clear = formData.get('clear') === '1'
+  const date = clear ? '' : String(formData.get('reconciled_through') ?? '').trim()
+  const note = clear ? '' : String(formData.get('reconciliation_note') ?? '').trim()
+
+  if (note.length > 1000) {
+    return { ok: false, message: 'La nota no puede superar 1000 caracteres.' }
+  }
+  if (!date && note) {
+    return { ok: false, message: 'Elige una fecha para guardar la nota de conciliación.' }
+  }
+  if (date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return { ok: false, message: 'La fecha de conciliación no es válida.' }
+    }
+    const parsed = new Date(`${date}T12:00:00Z`)
+    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+      return { ok: false, message: 'La fecha de conciliación no es válida.' }
+    }
+    if (date > formatDateInputValue(new Date())) {
+      return { ok: false, message: 'No puedes conciliar una fecha futura.' }
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('accounts')
+    .update({
+      reconciled_through: date || null,
+      reconciliation_note: note || null,
+    })
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle()
+
+  if (error || !data) {
+    return { ok: false, message: 'No se pudo guardar la conciliación.' }
+  }
+  revalidatePath('/cuentas')
+  revalidatePath('/movimientos')
+  return { ok: true, message: clear ? 'Conciliación quitada.' : 'Conciliación guardada.' }
 }

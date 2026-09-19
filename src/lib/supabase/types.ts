@@ -37,6 +37,8 @@ export type Account = {
   color: string | null
   icon: string | null
   archived: boolean
+  reconciled_through: string | null
+  reconciliation_note: string | null
   created_at: string
   updated_at: string
 }
@@ -152,6 +154,8 @@ export interface Database {
           color?: string | null
           icon?: string | null
           archived?: boolean
+          reconciled_through?: string | null
+          reconciliation_note?: string | null
           created_at?: string
           updated_at?: string
         }

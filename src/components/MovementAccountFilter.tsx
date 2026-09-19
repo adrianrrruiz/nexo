@@ -23,6 +23,7 @@ export default function MovementAccountFilter({
           const params = new URLSearchParams(searchParams)
           if (event.target.value) params.set('cuenta', event.target.value)
           else params.delete('cuenta')
+          params.delete('anteriores')
           const query = params.toString()
           router.replace(query ? `${pathname}?${query}` : pathname)
         }}
