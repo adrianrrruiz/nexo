@@ -53,6 +53,11 @@ function json(body: unknown, status = 200) {
   })
 }
 
+function categorySortName(label: string) {
+  // Los emojis identifican visualmente la categoría, pero no definen su orden alfabético.
+  return label.replace(/^[^\p{L}\p{N}]+/u, '').trimStart()
+}
+
 export async function GET(request: Request) {
   const auth = await authenticateShortcut(request)
   if (!auth) return json({ ok: false, message: 'Credencial inválida o revocada.' }, 401)
@@ -97,7 +102,15 @@ export async function GET(request: Request) {
         ? `${category.label} (${category.id})`
         : category.label,
     }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'es'))
+    .sort((a, b) =>
+      categorySortName(a.label).localeCompare(categorySortName(b.label), 'es', { sensitivity: 'base' }) ||
+      a.label.localeCompare(b.label, 'es') ||
+      a.id.localeCompare(b.id)
+    )
+  const categoryLabels = {
+    expense: categories.filter((category) => category.kind === 'expense').map((category) => category.label),
+    income: categories.filter((category) => category.kind === 'income').map((category) => category.label),
+  }
   const categoriesByName = {
     expense: Object.fromEntries(
       categories.filter((category) => category.kind === 'expense').map((category) => [category.label, category.id])
@@ -117,6 +130,7 @@ export async function GET(request: Request) {
     accounts,
     accounts_by_name: Object.fromEntries(accounts.map((account) => [account.name, account.id])),
     categories,
+    category_labels: categoryLabels,
     categories_by_name: categoriesByName,
   })
 }

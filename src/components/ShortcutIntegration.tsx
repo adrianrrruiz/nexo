@@ -145,9 +145,9 @@ export default function ShortcutIntegration({
         <ol className="mt-5 grid gap-3 text-sm leading-6 text-neutral-300 lg:grid-cols-2">
           <Instruction number="1" text="Solicitar entrada de tipo Número para el monto." />
           <Instruction number="2" text="Elegir del menú: Gasto, Ingreso o Transferencia; guarda expense, income o transfer." />
-          <Instruction number="3" text="Haz GET al endpoint con Authorization: Bearer TU_CLAVE. Conserva accounts_by_name y categories_by_name de la respuesta." />
+          <Instruction number="3" text="Haz GET al endpoint con Authorization: Bearer TU_CLAVE. Conserva accounts_by_name, category_labels y categories_by_name de la respuesta." />
           <Instruction number="4" text="Elige una cuenta de las claves de accounts_by_name y recupera su UUID. En transferencias, repite para el destino." />
-          <Instruction number="5" text="Si es gasto o ingreso, obtén de categories_by_name el diccionario con clave expense o income según el tipo elegido. Elige una de sus claves y recupera su UUID como category_id. En transferencias, omite este paso." />
+          <Instruction number="5" text="Si es gasto o ingreso, obtén de category_labels la lista expense o income según el tipo elegido y usa Elegir de la lista. Luego busca el nombre elegido en categories_by_name del mismo tipo para obtener su UUID como category_id. En transferencias, omite este paso." />
           <Instruction number="6" text="Solicita una nota de texto; puede quedar vacía. Añade también la acción Generar UUID." />
           <Instruction number="7" text="Haz POST JSON al mismo endpoint con type, amount, account_id, to_account_id, category_id, note e idempotency_key." />
           <Instruction number="8" text="Obtén message de la respuesta y usa Mostrar resultado." />
