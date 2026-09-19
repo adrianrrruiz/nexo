@@ -13,12 +13,12 @@ function dayAfterInBogota(date: string): string {
 export async function loadOlderMovementMonth({
   accountId,
   categoryId,
-  showReconciled,
+  reconciliationMode,
   beforeMonth,
 }: {
   accountId: string
   categoryId: string
-  showReconciled: boolean
+  reconciliationMode: boolean
   beforeMonth: string
 }) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(beforeMonth)) {
@@ -51,7 +51,8 @@ export async function loadOlderMovementMonth({
     accountId,
     categoryIds: ids ? (ids.length ? ids : [categoryId]) : null,
     uncategorized: categoryId === UNCATEGORIZED_KEY,
-    reconciliationBoundary: reconciledThrough ? dayAfterInBogota(reconciledThrough) : null,
-    showReconciled: Boolean(reconciledThrough && showReconciled),
+    reconciliationBoundary: reconciliationMode && reconciledThrough
+      ? dayAfterInBogota(reconciledThrough)
+      : null,
   }, beforeMonth)
 }

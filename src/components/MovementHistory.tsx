@@ -11,11 +11,11 @@ import { getTransactionMeta } from '@/lib/transaction-meta'
 import type { MovementMonth } from '@/lib/movement-history'
 import type { Account, Category, Transaction, TransactionType } from '@/lib/supabase/types'
 
-function categoriaHref(categoriaId: string, accountId: string, showReconciled: boolean) {
+function categoriaHref(categoriaId: string, accountId: string, reconciliationMode: boolean) {
   const params = new URLSearchParams()
   if (accountId) params.set('cuenta', accountId)
   if (categoriaId) params.set('categoria', categoriaId)
-  if (showReconciled) params.set('anteriores', '1')
+  if (reconciliationMode) params.set('conciliacion', '1')
   return `/movimientos?${params.toString()}`
 }
 
@@ -29,7 +29,7 @@ export default function MovementHistory({
   imageUrls,
   accountId,
   categoryId,
-  showReconciled,
+  reconciliationMode,
 }: {
   initialMonth: MovementMonth
   accounts: AccountItem[]
@@ -37,7 +37,7 @@ export default function MovementHistory({
   imageUrls: Record<string, string>
   accountId: string
   categoryId: string
-  showReconciled: boolean
+  reconciliationMode: boolean
 }) {
   const [pages, setPages] = useState<MovementMonth[]>([initialMonth])
   const [previousInitialMonth, setPreviousInitialMonth] = useState(initialMonth)
@@ -68,7 +68,7 @@ export default function MovementHistory({
       const next = await loadOlderMovementMonth({
         accountId,
         categoryId,
-        showReconciled,
+        reconciliationMode,
         beforeMonth: pages.at(-1)!.month,
       })
       if (generation !== generationRef.current) return
@@ -84,7 +84,7 @@ export default function MovementHistory({
         setLoading(false)
       }
     }
-  }, [accountId, categoryId, showReconciled, pages, hasMore])
+  }, [accountId, categoryId, reconciliationMode, pages, hasMore])
 
   useEffect(() => {
     if (!hasMore || error || !sentinelRef.current) return
@@ -120,7 +120,7 @@ export default function MovementHistory({
               categoryName={categoryName}
               categoryParent={categoryParent}
               accountId={accountId}
-              showReconciled={showReconciled}
+              reconciliationMode={reconciliationMode}
             />
             <MonthTransactionList
               transactions={transactions}
@@ -159,14 +159,14 @@ function MonthSummary({
   categoryName,
   categoryParent,
   accountId,
-  showReconciled,
+  reconciliationMode,
 }: {
   month: string
   transactions: Transaction[]
   categoryName: Map<string, string>
   categoryParent: Map<string, string | null>
   accountId: string
-  showReconciled: boolean
+  reconciliationMode: boolean
 }) {
   const income = transactions
     .filter((t) => t.type === 'income')
@@ -199,14 +199,14 @@ function MonthSummary({
           items={expenseByCat}
           type="expense"
           accountId={accountId}
-          showReconciled={showReconciled}
+          reconciliationMode={reconciliationMode}
         />
         <MiniBreakdown
           title="Ingresos"
           items={incomeByCat}
           type="income"
           accountId={accountId}
-          showReconciled={showReconciled}
+          reconciliationMode={reconciliationMode}
         />
       </div>
     </div>
@@ -346,13 +346,13 @@ function MiniBreakdown({
   items,
   type,
   accountId,
-  showReconciled,
+  reconciliationMode,
 }: {
   title: string
   items: MiniItem[]
   type: Extract<TransactionType, 'income' | 'expense'>
   accountId: string
-  showReconciled: boolean
+  reconciliationMode: boolean
 }) {
   if (items.length === 0) return null
   const color = type === 'income' ? 'bg-brand' : 'bg-red-400'
@@ -363,7 +363,7 @@ function MiniBreakdown({
         {items.map((item) => (
           <Link
             key={item.id}
-            href={categoriaHref(item.id, accountId, showReconciled)}
+            href={categoriaHref(item.id, accountId, reconciliationMode)}
             aria-label={`Filtrar movimientos por ${item.name}`}
             className="group -mx-2 block rounded-lg px-2 py-1 transition-colors hover:bg-white/[0.05] active:bg-white/[0.08]"
           >

@@ -9,7 +9,6 @@ export type MovementFilters = {
   categoryIds: string[] | null
   uncategorized: boolean
   reconciliationBoundary: string | null
-  showReconciled: boolean
 }
 
 export type MovementMonth = {
@@ -48,9 +47,7 @@ function applyFilters<T extends {
     )
   }
   if (filters.reconciliationBoundary) {
-    result = filters.showReconciled
-      ? result.lt('occurred_at', filters.reconciliationBoundary)
-      : result.gte('occurred_at', filters.reconciliationBoundary)
+    result = result.gte('occurred_at', filters.reconciliationBoundary)
   }
   if (filters.uncategorized) result = result.is('category_id', null)
   else if (filters.categoryIds) result = result.in('category_id', filters.categoryIds)
