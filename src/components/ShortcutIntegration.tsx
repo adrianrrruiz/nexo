@@ -62,8 +62,8 @@ export default function ShortcutIntegration({
             </div>
           </div>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-neutral-400">
-            La credencial permite crear movimientos y consultar únicamente los nombres e
-            identificadores de tus cuentas activas. Puedes revocarla en cualquier momento.
+            La credencial permite crear movimientos y consultar los nombres e identificadores
+            de tus cuentas activas y categorías. Puedes revocarla en cualquier momento.
           </p>
           {currentlyActive && (
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
@@ -136,7 +136,7 @@ export default function ShortcutIntegration({
       <div className="mt-7 border-t border-white/[0.06] pt-6">
         <h3 className="text-sm font-semibold">Configuración del atajo</h3>
         <p className="mt-1 text-xs leading-5 text-neutral-500">
-          Usa esta dirección tanto para consultar cuentas como para guardar el movimiento:
+          Usa esta dirección para consultar cuentas y categorías y para guardar el movimiento:
         </p>
         <code className="mt-3 block overflow-x-auto rounded-xl bg-black/25 px-3 py-2 text-xs text-neutral-300">
           {ENDPOINT}
@@ -145,12 +145,13 @@ export default function ShortcutIntegration({
         <ol className="mt-5 grid gap-3 text-sm leading-6 text-neutral-300 lg:grid-cols-2">
           <Instruction number="1" text="Solicitar entrada de tipo Número para el monto." />
           <Instruction number="2" text="Elegir del menú: Gasto, Ingreso o Transferencia; guarda expense, income o transfer." />
-          <Instruction number="3" text="Haz GET al endpoint con Authorization: Bearer TU_CLAVE y toma accounts_by_name." />
-          <Instruction number="4" text="Elige una cuenta de sus claves y recupera su UUID. En transferencias, repite para el destino." />
-          <Instruction number="5" text="Solicita una nota de texto; puede quedar vacía. Añade también la acción Generar UUID." />
-          <Instruction number="6" text="Haz POST JSON al mismo endpoint con type, amount, account_id, to_account_id, note e idempotency_key." />
-          <Instruction number="7" text="Obtén message de la respuesta y usa Mostrar resultado." />
-          <Instruction number="8" text="Asigna el atajo a Tocar atrás → Doble toque." />
+          <Instruction number="3" text="Haz GET al endpoint con Authorization: Bearer TU_CLAVE. Conserva accounts_by_name y categories_by_name de la respuesta." />
+          <Instruction number="4" text="Elige una cuenta de las claves de accounts_by_name y recupera su UUID. En transferencias, repite para el destino." />
+          <Instruction number="5" text="Si es gasto o ingreso, obtén de categories_by_name el diccionario con clave expense o income según el tipo elegido. Elige una de sus claves y recupera su UUID como category_id. En transferencias, omite este paso." />
+          <Instruction number="6" text="Solicita una nota de texto; puede quedar vacía. Añade también la acción Generar UUID." />
+          <Instruction number="7" text="Haz POST JSON al mismo endpoint con type, amount, account_id, to_account_id, category_id, note e idempotency_key." />
+          <Instruction number="8" text="Obtén message de la respuesta y usa Mostrar resultado." />
+          <Instruction number="9" text="Asigna el atajo a Tocar atrás → Doble toque." />
         </ol>
 
         <details className="mt-5 rounded-2xl border border-white/[0.06] bg-black/15 p-4">
@@ -162,9 +163,14 @@ export default function ShortcutIntegration({
   "amount": 25000,
   "account_id": "UUID_DE_LA_CUENTA",
   "to_account_id": null,
+  "category_id": "UUID_DE_LA_CATEGORIA",
   "note": "Almuerzo",
   "idempotency_key": "UUID_GENERADO_POR_ATAJOS"
 }`}</pre>
+          <p className="mt-3 text-xs leading-5 text-neutral-500">
+            Para transferencias, envía category_id como null. Para mantener un gasto o ingreso
+            sin categoría, también puedes enviarlo como null.
+          </p>
         </details>
       </div>
     </section>

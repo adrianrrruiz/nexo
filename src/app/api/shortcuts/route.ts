@@ -30,6 +30,13 @@ const transactionSchema = z
         message: 'Solo las transferencias pueden tener una cuenta destino.',
       })
     }
+    if (input.type === 'transfer' && input.category_id) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['category_id'],
+        message: 'Las transferencias no llevan categoría.',
+      })
+    }
     if (input.to_account_id === input.account_id) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -50,14 +57,55 @@ export async function GET(request: Request) {
   const auth = await authenticateShortcut(request)
   if (!auth) return json({ ok: false, message: 'Credencial inválida o revocada.' }, 401)
 
-  const { data: accounts, error } = await auth.admin
-    .from('accounts')
-    .select('id,name,type,bank')
-    .eq('user_id', auth.userId)
-    .eq('archived', false)
-    .order('name')
+  const [accountsResult, categoriesResult] = await Promise.all([
+    auth.admin
+      .from('accounts')
+      .select('id,name,type,bank')
+      .eq('user_id', auth.userId)
+      .eq('archived', false)
+      .order('name'),
+    auth.admin
+      .from('categories')
+      .select('id,name,kind,parent_id')
+      .eq('user_id', auth.userId)
+      .eq('is_suggested', false)
+      .order('name'),
+  ])
 
-  if (error) return json({ ok: false, message: 'No se pudieron cargar las cuentas.' }, 500)
+  if (accountsResult.error || categoriesResult.error) {
+    return json({ ok: false, message: 'No se pudieron cargar las cuentas y categorías.' }, 500)
+  }
+
+  const accounts = accountsResult.data ?? []
+  const rawCategories = categoriesResult.data ?? []
+  const namesById = new Map(rawCategories.map((category) => [category.id, category.name]))
+  const categoriesWithLabels = rawCategories.map((category) => ({
+    ...category,
+    label: category.parent_id && namesById.has(category.parent_id)
+      ? `${namesById.get(category.parent_id)} / ${category.name}`
+      : category.name,
+  }))
+  const labelCounts = new Map<string, number>()
+  for (const category of categoriesWithLabels) {
+    const key = `${category.kind}:${category.label}`
+    labelCounts.set(key, (labelCounts.get(key) ?? 0) + 1)
+  }
+  const categories = categoriesWithLabels
+    .map((category) => ({
+      ...category,
+      label: (labelCounts.get(`${category.kind}:${category.label}`) ?? 0) > 1
+        ? `${category.label} (${category.id})`
+        : category.label,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'es'))
+  const categoriesByName = {
+    expense: Object.fromEntries(
+      categories.filter((category) => category.kind === 'expense').map((category) => [category.label, category.id])
+    ),
+    income: Object.fromEntries(
+      categories.filter((category) => category.kind === 'income').map((category) => [category.label, category.id])
+    ),
+  }
 
   await auth.admin
     .from('shortcut_tokens')
@@ -66,8 +114,10 @@ export async function GET(request: Request) {
 
   return json({
     ok: true,
-    accounts: accounts ?? [],
-    accounts_by_name: Object.fromEntries((accounts ?? []).map((account) => [account.name, account.id])),
+    accounts,
+    accounts_by_name: Object.fromEntries(accounts.map((account) => [account.name, account.id])),
+    categories,
+    categories_by_name: categoriesByName,
   })
 }
 
