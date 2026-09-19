@@ -4,7 +4,7 @@
 // Por ahora se mantienen a mano para tener tipado en la app.
 
 export type AccountType = 'debit' | 'savings' | 'credit' | 'cash'
-export type SupportedBank = 'nequi' | 'rappi' | 'nu'
+export type SupportedBank = 'nequi' | 'rappi' | 'nu' | 'bbva' | 'bancolombia' | 'falabella'
 export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment'
 export type TransactionSource = 'manual' | 'import' | 'email' | 'shortcut' | 'subscription'
 export type CategoryKind = 'income' | 'expense'

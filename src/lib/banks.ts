@@ -7,6 +7,9 @@ export const SUPPORTED_BANKS: readonly {
   { value: 'nequi', label: 'Nequi' },
   { value: 'rappi', label: 'Rappi' },
   { value: 'nu', label: 'Nu' },
+  { value: 'bbva', label: 'BBVA' },
+  { value: 'bancolombia', label: 'Bancolombia' },
+  { value: 'falabella', label: 'Falabella' },
 ]
 
 export const BANK_LABEL: Record<SupportedBank, string> = Object.fromEntries(
@@ -19,7 +22,7 @@ export function isSupportedBank(value: string): value is SupportedBank {
 
 const DEFAULT_IMAGE_BY_BANK: Record<
   SupportedBank,
-  { standard: string; credit?: string }
+  { standard: string | null; credit?: string }
 > = {
   nequi: { standard: 'defaults/nequi.jpeg' },
   nu: {
@@ -30,6 +33,9 @@ const DEFAULT_IMAGE_BY_BANK: Record<
     standard: 'defaults/rappi.jpeg',
     credit: 'defaults/rappi-credit.jpg',
   },
+  bbva: { standard: null },
+  bancolombia: { standard: null },
+  falabella: { standard: null },
 }
 
 export function getDefaultAccountImagePath(
