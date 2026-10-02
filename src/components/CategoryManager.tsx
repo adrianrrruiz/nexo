@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import {
   createCategory,
   createCategoryFromSuggestion,
@@ -18,11 +18,13 @@ type CategorySuggestion = Pick<Category, 'id' | 'name' | 'kind' | 'color' | 'ico
 export function NewCategoryButton({
   categories,
   suggestions = [],
+  parentCategory,
 }: {
   categories: Category[]
   suggestions?: CategorySuggestion[]
+  parentCategory?: Category
 }) {
-  return <CategoryForm mode="create" categories={categories} suggestions={suggestions} />
+  return <CategoryForm mode="create" categories={categories} suggestions={suggestions} parentCategory={parentCategory} />
 }
 
 export function EditCategoryButton({
@@ -107,14 +109,24 @@ function CategoryForm({
   category,
   categories,
   suggestions = [],
+  parentCategory,
 }: {
   mode: 'create' | 'edit'
   category?: Category
   categories: Category[]
   suggestions?: CategorySuggestion[]
+  parentCategory?: Category
 }) {
   const [open, setOpen] = useState(false)
-  const [kind, setKind] = useState<CategoryKind>(category?.kind ?? 'expense')
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const dialog = dialogRef.current
+    dialog?.showModal()
+    dialog?.querySelector<HTMLInputElement>('input[name="name"]')?.focus()
+    return () => dialog?.close()
+  }, [open])
+  const [kind, setKind] = useState<CategoryKind>(category?.kind ?? parentCategory?.kind ?? 'expense')
   const [state, action, pending] = useActionState<CategoryState, FormData>(
     mode === 'create' ? createCategory : updateCategory,
     null
@@ -145,18 +157,20 @@ function CategoryForm({
       <button
         type="button"
         onClick={() => {
-          setKind(category?.kind ?? 'expense')
+          setKind(category?.kind ?? parentCategory?.kind ?? 'expense')
           setOpen(true)
         }}
         className={
           mode === 'create'
-            ? 'rounded-2xl bg-brand px-4 py-2.5 text-sm font-semibold text-neutral-950'
-            : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-neutral-400 transition-colors hover:text-brand'
+            ? parentCategory
+              ? 'rounded-xl px-2 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand/10'
+              : 'rounded-2xl bg-brand px-4 py-2.5 text-sm font-semibold text-neutral-950'
+            : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-neutral-400 transition-colors hover:border-brand/30 hover:text-brand'
         }
-        aria-label={mode === 'create' ? 'Nueva categoría' : 'Editar categoría'}
+        aria-label={mode === 'create' ? (parentCategory ? `Crear subcategoría de ${parentCategory.name}` : 'Crear categoría') : `Editar ${category?.name ?? 'categoría'}`}
       >
         {mode === 'create' ? (
-          'Nueva'
+          parentCategory ? '+ Subcategoría' : '+ Crear categoría'
         ) : (
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15.5 5.5 3 3M4 20l4.2-1 10.3-10.3a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z" />
@@ -165,103 +179,113 @@ function CategoryForm({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 backdrop-blur-sm lg:items-center lg:p-8">
-          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[28px] border-t border-white/10 bg-surface p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-2xl shadow-black/50 lg:rounded-[28px] lg:border">
-            <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/15" />
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
-                {mode === 'create' ? 'Nueva categoría' : 'Editar categoría'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-neutral-400"
-                aria-label="Cerrar"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="m6 6 12 12M18 6 6 18" />
-                </svg>
-              </button>
-            </div>
-
-            <form action={action} className="space-y-3">
-              {category && <input type="hidden" name="id" value={category.id} />}
-              <input
-                name="name"
-                required
-                defaultValue={category?.name ?? ''}
-                placeholder="Nombre"
-                className={FIELD}
-              />
-              <select
-                name="kind"
-                value={kind}
-                onChange={(event) => setKind(event.target.value as CategoryKind)}
-                className={FIELD}
-              >
-                <option value="expense">Gasto</option>
-                <option value="income">Ingreso</option>
-              </select>
-              <select name="parent_id" defaultValue={category?.parent_id ?? ''} className={FIELD}>
-                <option value="">Categoría principal</option>
-                {parentOptions.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    Subcategoría de {item.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                disabled={pending}
-                className="w-full rounded-2xl bg-gradient-to-r from-brand to-brand-deep py-3.5 font-semibold text-neutral-950 disabled:opacity-60"
-              >
-                {pending ? 'Guardando...' : 'Guardar'}
-              </button>
-              {state && (
-                <p className={`text-center text-sm ${state.ok ? 'text-brand' : 'text-red-400'}`}>
-                  {state.message}
-                </p>
-              )}
-            </form>
-
-            {mode === 'create' && visibleSuggestions.length > 0 && (
-              <div className="mt-5 border-t border-white/[0.06] pt-5">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Sugeridas
-                </p>
-                <CategorySuggestionGrid
-                  categories={categories}
-                  suggestions={suggestions}
-                  kind={kind}
-                />
+        <dialog ref={dialogRef} onCancel={() => setOpen(false)} aria-labelledby="category-form-title" className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none bg-transparent p-0 text-neutral-100 backdrop:bg-black/70 backdrop:backdrop-blur-sm">
+          <div className="flex h-full items-end justify-center lg:items-center lg:p-8">
+            <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[28px] border-t border-white/10 bg-surface p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-2xl shadow-black/50 lg:rounded-[28px] lg:border">
+              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/15" />
+              <div className="mb-5 flex items-center justify-between">
+                <h2 id="category-form-title" className="text-lg font-semibold">
+                  {mode === 'create' ? parentCategory ? 'Nueva subcategoría' : 'Nueva categoría' : 'Editar categoría'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-neutral-400"
+                  aria-label="Cerrar"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="m6 6 12 12M18 6 6 18" />
+                  </svg>
+                </button>
               </div>
-            )}
 
-            {category && (
-              <form
-                action={deleteAction}
-                onSubmit={(event) => {
-                  if (!confirm('¿Eliminar esta categoría?')) event.preventDefault()
-                }}
-                className="mt-3"
-              >
-                <input type="hidden" name="id" value={category.id} />
+              {parentCategory && <p className="mb-4 text-sm text-neutral-400">Agrupa tus movimientos dentro de <span className="font-medium text-brand">{parentCategory.name}</span>.</p>}
+
+              <form action={action} className="space-y-3">
+                {category && <input type="hidden" name="id" value={category.id} />}
+                <label className="block text-sm text-neutral-300" htmlFor="category-name">{parentCategory ? 'Nombre de la subcategoría' : 'Nombre de la categoría'}</label>
+                <input
+                  id="category-name"
+                  autoFocus
+                  name="name"
+                  required
+                  defaultValue={category?.name ?? ''}
+                  placeholder="Ej. Mascotas, Viajes o Proyectos"
+                  className={FIELD}
+                />
+                <label className="block text-sm text-neutral-300" htmlFor="category-kind">Tipo de movimiento</label>
+                <select
+                  id="category-kind"
+                  name="kind"
+                  value={kind}
+                  onChange={(event) => setKind(event.target.value as CategoryKind)}
+                  className={FIELD}
+                >
+                  <option value="expense">Gasto</option>
+                  <option value="income">Ingreso</option>
+                </select>
+                <label className="block text-sm text-neutral-300" htmlFor="category-parent">¿Dónde quieres agruparla?</label>
+                <select id="category-parent" key={kind} name="parent_id" defaultValue={category?.parent_id ?? (parentCategory?.kind === kind ? parentCategory.id : '')} className={FIELD}>
+                  <option value="">Categoría principal</option>
+                  {parentOptions.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      Subcategoría de {item.name}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="submit"
-                  disabled={deleting}
-                  className="w-full rounded-2xl border border-red-500/20 bg-red-500/10 py-3.5 text-sm font-semibold text-red-400 disabled:opacity-60"
+                  disabled={pending}
+                  className="w-full rounded-2xl bg-gradient-to-r from-brand to-brand-deep py-3.5 font-semibold text-neutral-950 disabled:opacity-60"
                 >
-                  {deleting ? 'Eliminando...' : 'Eliminar categoría'}
+                  {pending ? 'Guardando…' : mode === 'create' ? parentCategory ? 'Crear subcategoría' : 'Crear categoría' : 'Guardar cambios'}
                 </button>
-                {deleteState && !deleteState.ok && (
-                  <p className="mt-2 text-center text-sm text-red-400">
-                    {deleteState.message}
+                {state && (
+                  <p className={`text-center text-sm ${state.ok ? 'text-brand' : 'text-red-400'}`}>
+                    {state.message}
                   </p>
                 )}
               </form>
-            )}
+
+              {mode === 'create' && visibleSuggestions.length > 0 && (
+                <div className="mt-5 border-t border-white/[0.06] pt-5">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                    Sugeridas
+                  </p>
+                  <CategorySuggestionGrid
+                    categories={categories}
+                    suggestions={suggestions}
+                    kind={kind}
+                  />
+                </div>
+              )}
+
+              {category && (
+                <form
+                  action={deleteAction}
+                  onSubmit={(event) => {
+                    if (!confirm('¿Eliminar esta categoría?')) event.preventDefault()
+                  }}
+                  className="mt-3"
+                >
+                  <input type="hidden" name="id" value={category.id} />
+                  <button
+                    type="submit"
+                    disabled={deleting}
+                    className="w-full rounded-2xl border border-red-500/20 bg-red-500/10 py-3.5 text-sm font-semibold text-red-400 disabled:opacity-60"
+                  >
+                    {deleting ? 'Eliminando...' : 'Eliminar categoría'}
+                  </button>
+                  {deleteState && !deleteState.ok && (
+                    <p className="mt-2 text-center text-sm text-red-400">
+                      {deleteState.message}
+                    </p>
+                  )}
+                </form>
+              )}
+            </div>
           </div>
-        </div>
+        </dialog>
       )}
     </>
   )

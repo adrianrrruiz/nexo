@@ -7,6 +7,7 @@ import {
   updateAccount,
   type AccountState,
 } from '@/app/(app)/cuentas/actions'
+import CreateAccountButton from '@/components/CreateAccountFlow'
 import type { AccountBalance, AccountType } from '@/lib/supabase/types'
 import { SUPPORTED_BANKS } from '@/lib/banks'
 
@@ -15,13 +16,11 @@ const FIELD =
 
 const TYPES: { value: AccountType; label: string }[] = [
   { value: 'debit', label: 'Débito' },
-  { value: 'savings', label: 'Ahorros' },
   { value: 'credit', label: 'Crédito' },
-  { value: 'cash', label: 'Efectivo' },
 ]
 
 export function NewAccountButton() {
-  return <AccountForm mode="create" />
+  return <CreateAccountButton />
 }
 
 export function EditAccountButton({ account }: { account: AccountBalance }) {
@@ -36,7 +35,7 @@ function AccountForm({
   account?: AccountBalance
 }) {
   const [open, setOpen] = useState(false)
-  const [type, setType] = useState<AccountType>(account?.type ?? 'debit')
+  const [type, setType] = useState<AccountType>(account?.type === 'credit' ? 'credit' : 'debit')
   const [state, action, pending] = useActionState<AccountState, FormData>(
     mode === 'create' ? createAccount : updateAccount,
     null
@@ -60,7 +59,7 @@ function AccountForm({
         onClick={(event) => {
           event.preventDefault()
           event.stopPropagation()
-          setType(account?.type ?? 'debit')
+          setType(account?.type === 'credit' ? 'credit' : 'debit')
           setOpen(true)
         }}
         className={

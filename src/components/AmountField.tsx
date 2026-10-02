@@ -15,11 +15,17 @@ export default function AmountField({
   value,
   onChange,
   label = 'Monto',
+  id,
+  describedBy,
+  required = true,
 }: {
   name: string
   value: string
   onChange: (cents: string) => void
   label?: string
+  id?: string
+  describedBy?: string
+  required?: boolean
 }) {
   const stripLeadingZeros = (digits: string) => digits.replace(/^0+(?=\d)/, '')
 
@@ -33,7 +39,9 @@ export default function AmountField({
       <input
         type="text"
         inputMode="numeric"
-        required
+        id={id}
+        required={required}
+        aria-describedby={describedBy}
         aria-label={label}
         placeholder="$ 0,00"
         value={value ? formatCOPFromCents(value) : ''}

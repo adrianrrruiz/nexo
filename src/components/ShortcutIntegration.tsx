@@ -7,7 +7,7 @@ import {
   type ShortcutTokenState,
 } from '@/app/(app)/perfil/actions'
 
-const ENDPOINT = 'https://nexo-adrianrrruiz.vercel.app/api/shortcuts'
+const SHORTCUT_URL = 'https://www.icloud.com/shortcuts/a79d33e26b05495aaa188ac78c7b7337'
 
 export default function ShortcutIntegration({
   active,
@@ -62,12 +62,11 @@ export default function ShortcutIntegration({
             </div>
           </div>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-neutral-400">
-            La credencial permite crear movimientos y consultar los nombres e identificadores
-            de tus cuentas activas y categorías. Puedes revocarla en cualquier momento.
+            Agrega el atajo y registra tus movimientos con dos toques en la parte de atrás de tu iPhone.
           </p>
           {currentlyActive && (
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
-              <span className="font-medium text-brand">● Credencial activa</span>
+              <span className="font-medium text-brand">● Clave activa</span>
               {createdAt && <span>Creada {formatDate(createdAt)}</span>}
               {lastUsedAt && <span>Último uso {formatDate(lastUsedAt)}</span>}
             </div>
@@ -134,44 +133,22 @@ export default function ShortcutIntegration({
       )}
 
       <div className="mt-7 border-t border-white/[0.06] pt-6">
-        <h3 className="text-sm font-semibold">Configuración del atajo</h3>
-        <p className="mt-1 text-xs leading-5 text-neutral-500">
-          Usa esta dirección para consultar cuentas y categorías y para guardar el movimiento:
-        </p>
-        <code className="mt-3 block overflow-x-auto rounded-xl bg-black/25 px-3 py-2 text-xs text-neutral-300">
-          {ENDPOINT}
-        </code>
-
-        <ol className="mt-5 grid gap-3 text-sm leading-6 text-neutral-300 lg:grid-cols-2">
-          <Instruction number="1" text="Solicitar entrada de tipo Número para el monto." />
-          <Instruction number="2" text="Elegir del menú: Gasto, Ingreso o Transferencia; guarda expense, income o transfer." />
-          <Instruction number="3" text="Haz GET al endpoint con Authorization: Bearer TU_CLAVE. Conserva accounts_by_name, category_labels y categories_by_name de la respuesta." />
-          <Instruction number="4" text="Elige una cuenta de las claves de accounts_by_name y recupera su UUID. En transferencias, repite para el destino." />
-          <Instruction number="5" text="Si es gasto o ingreso, obtén de category_labels la lista expense o income según el tipo elegido y usa Elegir de la lista. Luego busca el nombre elegido en categories_by_name del mismo tipo para obtener su UUID como category_id. En transferencias, omite este paso." />
-          <Instruction number="6" text="Solicita una nota de texto; puede quedar vacía. Añade también la acción Generar UUID." />
-          <Instruction number="7" text="Haz POST JSON al mismo endpoint con type, amount, account_id, to_account_id, category_id, note e idempotency_key." />
-          <Instruction number="8" text="Obtén message de la respuesta y usa Mostrar resultado." />
-          <Instruction number="9" text="Asigna el atajo a Tocar atrás → Doble toque." />
+        <a
+          href={SHORTCUT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-neutral-950 transition-opacity hover:opacity-90"
+        >
+          Agregar atajo a mi iPhone <span aria-hidden="true">↗</span>
+        </a>
+        <ol className="mt-4 grid gap-3 text-sm leading-6 text-neutral-300">
+          <Instruction number="1" text="Genera tu clave aquí y cópiala." />
+          <Instruction number="2" text="Agrega el atajo con el botón de arriba. En la app Atajos, toca los tres puntos del atajo y pega tu clave en el primer campo de Texto." />
+          <Instruction number="3" text="Ve a Configuración → Accesibilidad → Tocar → Toque posterior → Toque doble y elige el atajo que agregaste." />
         </ol>
-
-        <details className="mt-5 rounded-2xl border border-white/[0.06] bg-black/15 p-4">
-          <summary className="cursor-pointer text-sm font-medium text-neutral-200">
-            Cuerpo JSON del POST
-          </summary>
-          <pre className="mt-3 overflow-x-auto text-xs leading-5 text-neutral-400">{`{
-  "type": "expense",
-  "amount": 25000,
-  "account_id": "UUID_DE_LA_CUENTA",
-  "to_account_id": null,
-  "category_id": "UUID_DE_LA_CATEGORIA",
-  "note": "Almuerzo",
-  "idempotency_key": "UUID_GENERADO_POR_ATAJOS"
-}`}</pre>
-          <p className="mt-3 text-xs leading-5 text-neutral-500">
-            Para transferencias, envía category_id como null. Para mantener un gasto o ingreso
-            sin categoría, también puedes enviarlo como null.
-          </p>
-        </details>
+        <p className="mt-4 text-xs leading-5 text-neutral-500">
+          Listo: toca dos veces la parte de atrás de tu iPhone para registrar un movimiento.
+        </p>
       </div>
     </section>
   )

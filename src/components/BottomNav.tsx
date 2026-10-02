@@ -48,6 +48,18 @@ const ITEMS = [
     ),
   },
   {
+    href: '/categorias',
+    label: 'Categorías',
+    icon: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="2" />
+        <rect x="14" y="3" width="7" height="7" rx="2" />
+        <rect x="3" y="14" width="7" height="7" rx="2" />
+        <rect x="14" y="14" width="7" height="7" rx="2" />
+      </>
+    ),
+  },
+  {
     href: '/perfil',
     label: 'Perfil',
     icon: (
@@ -61,9 +73,7 @@ const ITEMS = [
 
 export default function BottomNav() {
   const pathname = usePathname()
-  const activeIndex = pathname.startsWith('/categorias')
-    ? ITEMS.findIndex((item) => item.href === '/cuentas')
-    : ITEMS.findIndex((item) => pathname.startsWith(item.href))
+  const activeIndex = ITEMS.findIndex((item) => pathname.startsWith(item.href))
   const currentIndex = activeIndex === -1 ? 0 : activeIndex
 
   return (
@@ -88,9 +98,9 @@ export default function BottomNav() {
 
       <nav
         aria-label="Navegación principal"
-        className="fixed inset-x-0 bottom-4 z-20 flex justify-center px-6 lg:hidden"
+        className="fixed inset-x-0 bottom-4 z-20 flex justify-center px-2 pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
-        <div className="relative overflow-hidden rounded-full border border-white/20 bg-white/[0.08] px-2 py-2 shadow-[0_18px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150">
+        <div className="relative w-full max-w-lg overflow-hidden rounded-full border border-white/20 bg-white/[0.08] px-2 py-2 shadow-[0_18px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150">
           <div className="pointer-events-none absolute inset-x-3 top-0 h-px bg-white/35" />
           <div className="pointer-events-none absolute -left-8 top-0 h-16 w-24 rounded-full bg-white/10 blur-2xl" />
           <div className="pointer-events-none absolute -right-8 bottom-0 h-16 w-24 rounded-full bg-brand/10 blur-2xl" />
@@ -158,7 +168,7 @@ function NavLink({
       </svg>
       <span
         className={
-          desktop ? '' : 'w-full truncate text-center text-[10px] font-medium'
+          desktop ? '' : 'w-full text-center text-[9px] font-medium'
         }
       >
         {item.label}

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { parseAccountAmount } from '@/lib/account-amounts'
 import { formatDateInputValue } from '@/lib/format'
 import type { AccountType } from '@/lib/supabase/types'
 import {
@@ -13,8 +14,7 @@ import {
 export type AccountState = { ok: boolean; message: string } | null
 
 function parseAmount(value: FormDataEntryValue | null) {
-  const raw = String(value ?? '').replace(/[^\d,-]/g, '').replace(',', '.')
-  return Number(raw || 0)
+  return parseAccountAmount(String(value ?? ''))
 }
 
 async function getUserId() {
@@ -38,11 +38,21 @@ export async function createAccount(
   const bank = String(formData.get('bank') ?? '')
   const initial_balance = parseAmount(formData.get('initial_balance'))
   const credit_limit =
-    type === 'credit' ? parseAmount(formData.get('credit_limit')) || null : null
+    type === 'credit' ? parseAmount(formData.get('credit_limit')) : null
 
   if (!name) return { ok: false, message: 'Escribe el nombre de la cuenta.' }
   if (!isSupportedBank(bank)) {
     return { ok: false, message: 'Selecciona un banco compatible.' }
+  }
+  if (!(['debit', 'credit'] as string[]).includes(type)) {
+    return { ok: false, message: 'Selecciona un tipo de cuenta válido.' }
+  }
+  if (credit_limit !== null && (!Number.isFinite(credit_limit) || credit_limit < 0)) {
+    return { ok: false, message: 'Escribe un cupo aprobado válido, igual o mayor que cero.' }
+  }
+
+  if (!Number.isFinite(initial_balance)) {
+    return { ok: false, message: 'Escribe un saldo inicial válido.' }
   }
 
   const { error } = await supabase.from('accounts').insert({
@@ -52,7 +62,7 @@ export async function createAccount(
     bank,
     image_path: getDefaultAccountImagePath(bank, type),
     initial_balance,
-    credit_limit,
+    credit_limit: credit_limit || null,
   })
 
   if (error) return { ok: false, message: error.message }
@@ -75,12 +85,18 @@ export async function updateAccount(
   const type = String(formData.get('type') ?? 'debit') as AccountType
   const bank = String(formData.get('bank') ?? '')
   const credit_limit =
-    type === 'credit' ? parseAmount(formData.get('credit_limit')) || null : null
+    type === 'credit' ? parseAmount(formData.get('credit_limit')) : null
 
   if (!id) return { ok: false, message: 'Cuenta inválida.' }
   if (!name) return { ok: false, message: 'Escribe el nombre de la cuenta.' }
   if (!isSupportedBank(bank)) {
     return { ok: false, message: 'Selecciona un banco compatible.' }
+  }
+  if (!(['debit', 'credit'] as string[]).includes(type)) {
+    return { ok: false, message: 'Selecciona un tipo de cuenta válido.' }
+  }
+  if (credit_limit !== null && (!Number.isFinite(credit_limit) || credit_limit < 0)) {
+    return { ok: false, message: 'Escribe un cupo aprobado válido, igual o mayor que cero.' }
   }
 
   const { data: currentAccount, error: lookupError } = await supabase
@@ -101,7 +117,7 @@ export async function updateAccount(
 
   const { error } = await supabase
     .from('accounts')
-    .update({ name, type, bank, credit_limit, image_path })
+    .update({ name, type, bank, credit_limit: credit_limit || null, image_path })
     .eq('id', id)
     .eq('user_id', userId)
 

@@ -6,41 +6,27 @@ import AccountAvatar from '@/components/AccountAvatar'
 import AccountImageUploader from '@/components/AccountImageUploader'
 import AccountReconciliation from '@/components/AccountReconciliation'
 import { EditAccountButton, NewAccountButton } from '@/components/AccountManager'
-import type { Account, AccountBalance, AccountType } from '@/lib/supabase/types'
+import type { Account, AccountBalance } from '@/lib/supabase/types'
 import { BANK_LABEL } from '@/lib/banks'
 
 export const dynamic = 'force-dynamic'
 
-const TYPE_LABEL: Record<AccountType, string> = {
+const TYPE_LABEL: Record<'debit' | 'credit', string> = {
   debit: 'Débito',
-  savings: 'Ahorros',
   credit: 'Crédito',
-  cash: 'Efectivo',
 }
 
-const TYPE_ICON: Record<AccountType, React.ReactNode> = {
+const TYPE_ICON: Record<'debit' | 'credit', React.ReactNode> = {
   debit: (
     <>
       <rect x="3" y="6" width="18" height="13" rx="3" />
       <path d="M3 10.5h18" />
     </>
   ),
-  savings: (
-    <>
-      <path d="M12 3v18" />
-      <path d="M17 6.5c0-1.5-2.2-2.5-5-2.5S7 5 7 6.5 9.2 9 12 9s5 1 5 2.5-2.2 2.5-5 2.5-5-1-5-2.5" transform="translate(0 4)" />
-    </>
-  ),
   credit: (
     <>
       <rect x="3" y="6" width="18" height="13" rx="3" />
       <path d="M7 15h4" />
-    </>
-  ),
-  cash: (
-    <>
-      <rect x="3" y="7" width="18" height="11" rx="2.5" />
-      <circle cx="12" cy="12.5" r="2.5" />
     </>
   ),
 }
@@ -72,16 +58,17 @@ export default async function CuentasPage() {
   const total = balances.reduce((s, b) => s + Number(b.balance), 0)
 
   // agrupa por tipo de cuenta
-  const byType = new Map<AccountType, AccountBalance[]>()
+  const byType = new Map<'debit' | 'credit', AccountBalance[]>()
   for (const b of balances) {
-    const list = byType.get(b.type)
+    const type = b.type === 'credit' ? 'credit' : 'debit'
+    const list = byType.get(type)
     if (list) list.push(b)
-    else byType.set(b.type, [b])
+    else byType.set(type, [b])
   }
 
   return (
     <>
-      <header className="mb-6 flex items-start justify-between gap-4 lg:mb-8">
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4 lg:mb-8">
         <div>
           <h1 className="text-xl font-semibold lg:text-2xl">Cuentas</h1>
           <p className="mt-0.5 text-sm text-neutral-500">
@@ -96,7 +83,7 @@ export default async function CuentasPage() {
             href="/categorias"
             aria-label="Gestionar categorías"
             title="Gestionar categorías"
-            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] text-neutral-300 transition-colors hover:border-brand/40 hover:text-brand"
+            className="flex min-h-10 items-center justify-center gap-2 rounded-2xl px-3 text-sm font-medium border border-white/[0.08] bg-white/[0.04] text-neutral-300 transition-colors hover:border-brand/40 hover:text-brand"
           >
             <svg
               viewBox="0 0 24 24"
@@ -114,6 +101,7 @@ export default async function CuentasPage() {
               <path d="m15.5 8.5 2.5-2.5 2.5 2.5" />
               <path d="m15.5 15.5 2.5 2.5 2.5-2.5" />
             </svg>
+            <span>Categorías</span>
           </Link>
           <NewAccountButton />
         </div>
@@ -123,7 +111,7 @@ export default async function CuentasPage() {
         <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center">
           <p className="text-neutral-300">Aún no tienes cuentas.</p>
           <p className="mt-2 text-sm text-neutral-500">
-            Usa el botón <span className="font-semibold text-brand">Nueva</span>{' '}
+            Usa el botón <span className="font-semibold text-brand">Crear cuenta</span>{' '}
             para crear tu primera cuenta.
           </p>
         </div>
@@ -161,7 +149,7 @@ export default async function CuentasPage() {
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                               >
-                                {TYPE_ICON[b.type]}
+                                {TYPE_ICON[type]}
                               </svg>
                             </span>
                           )}
