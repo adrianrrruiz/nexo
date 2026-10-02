@@ -70,7 +70,7 @@ export default async function DashboardPage() {
       .lt('occurred_at', end),
     supabase
       .from('subscriptions')
-      .select('id,name,amount,account_id,category_id,next_charge_on')
+      .select('id,name,amount,account_id,category_id,next_charge_on,next_charge_until,kind')
       .eq('user_id', user.id)
       .eq('active', true)
       .lte('next_charge_on', today)
@@ -110,7 +110,7 @@ export default async function DashboardPage() {
   >[]
   const dueSubscriptions = (dueRes.data ?? []) as Pick<
     Subscription,
-    'id' | 'name' | 'amount' | 'account_id' | 'category_id' | 'next_charge_on'
+    'id' | 'name' | 'amount' | 'account_id' | 'category_id' | 'next_charge_on' | 'next_charge_until' | 'kind'
   >[]
 
   const accountName = new Map(accounts.map((a) => [a.id, a.name]))
@@ -123,14 +123,17 @@ export default async function DashboardPage() {
 
   const dueItems: DueSubscription[] = dueSubscriptions.map((subscription) => ({
     id: subscription.id,
+    kind: subscription.kind,
+    accountId: subscription.account_id,
+    nextChargeOn: subscription.next_charge_on,
     name: subscription.name,
     amount: Number(subscription.amount),
-    accountName: accountName.get(subscription.account_id) ?? 'Cuenta archivada',
+    accountName: subscription.account_id ? accountName.get(subscription.account_id) ?? 'Cuenta archivada' : 'Cuenta por elegir',
     categoryLabel: subscription.category_id
       ? categoryLabel(subscription.category_id, categoryName, categoryParent, '')
       : null,
-    dueLabel: describeDueDate(subscription.next_charge_on, today),
-    overdue: subscription.next_charge_on < today,
+    dueLabel: subscription.next_charge_until ? `Hasta ${subscription.next_charge_until.split('-').reverse().join('/')}` : describeDueDate(subscription.next_charge_on, today),
+    overdue: (subscription.next_charge_until ?? subscription.next_charge_on) < today,
   }))
 
   const netWorth = balances.reduce((s, b) => s + Number(b.balance), 0)
@@ -160,8 +163,8 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <header className="mb-6 flex items-center justify-between lg:mb-8">
-        <div className="flex items-center gap-3">
+      <header className="mb-6 flex items-center justify-between gap-3 lg:mb-8">
+        <div className="flex min-w-0 items-center gap-3">
           <Logo className="h-9 w-9" id="nexo-logo-dash" />
           <div>
             <p className="text-xs text-neutral-500 lg:text-sm">Hola,</p>
@@ -188,10 +191,10 @@ export default async function DashboardPage() {
         <p className="text-xs font-medium uppercase tracking-wider text-emerald-950/60">
           Patrimonio neto
         </p>
-        <p className="mt-1.5 text-4xl font-bold tracking-tight text-neutral-950 lg:text-5xl">
+        <p className="mt-1.5 break-words text-[clamp(1.5rem,7vw,2.25rem)] font-bold tracking-tight text-neutral-950 lg:text-5xl">
           {formatCOP(netWorth)}
         </p>
-        <div className="mt-5 flex items-center gap-2 text-xs font-semibold">
+        <div className="mt-5 flex flex-wrap items-center gap-2 text-xs font-semibold">
           <span className="rounded-full bg-black/15 px-3 py-1.5 text-emerald-950">
             ↑ {formatCOP(monthIncome)}
           </span>
@@ -204,8 +207,8 @@ export default async function DashboardPage() {
 
       {dueItems.length > 0 && (
         <section className="mb-8">
-          <SectionHeader title="Suscripciones por registrar" href="/suscripciones" />
-          <SubscriptionDueList items={dueItems} />
+          <SectionHeader title="Cobros por registrar" href="/suscripciones" />
+          <SubscriptionDueList items={dueItems} accounts={accounts} />
         </section>
       )}
 
@@ -215,11 +218,11 @@ export default async function DashboardPage() {
         <>
           {/* Cuentas */}
           <SectionHeader title="Cuentas" href="/cuentas" />
-          <div className="no-scrollbar mb-8 flex gap-3 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5">
+          <div className="mb-8 grid grid-cols-1 gap-3 min-[375px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {balances.map((b) => (
               <div
                 key={b.id}
-                className="min-w-[148px] rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4 transition-colors hover:border-brand/20 hover:bg-white/[0.05] lg:min-w-0"
+                className="min-w-0 rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4 transition-colors hover:border-brand/20 hover:bg-white/[0.05] lg:min-w-0"
               >
                 <p className="truncate text-xs text-neutral-400">{b.name}</p>
                 <p
@@ -244,7 +247,7 @@ export default async function DashboardPage() {
             ))}
           </div>
 
-          <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
+          <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
             {(topExpense.length > 0 || topIncome.length > 0) && (
               <section>
                 <SectionHeader title="Análisis del mes" />
@@ -348,7 +351,7 @@ function CategoryBreakdown({
   const color = type === 'income' ? 'bg-brand' : 'bg-red-400'
   return (
     <section className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-5">
-      <div className="mb-4 flex items-baseline justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
         <h3 className="text-sm font-semibold text-neutral-200">{title}</h3>
         <span className="shrink-0 text-xs font-semibold tabular-nums text-neutral-400">
           {formatCOP(total)}
@@ -385,7 +388,7 @@ function CategoryBreakdown({
 
 function SectionHeader({ title, href }: { title: string; href?: string }) {
   return (
-    <div className="mb-3 flex items-baseline justify-between">
+    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
       <h2 className="text-sm font-semibold text-neutral-200">{title}</h2>
       {href && (
         <Link href={href} className="text-xs font-medium text-brand">

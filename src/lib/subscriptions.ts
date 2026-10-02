@@ -23,7 +23,7 @@ const MONTHS_PER_PERIOD: Record<SubscriptionFrequency, number> = {
 }
 
 export function isSubscriptionFrequency(value: string): value is SubscriptionFrequency {
-  return value in FREQUENCY_LABEL
+  return Object.hasOwn(FREQUENCY_LABEL, value)
 }
 
 /** Fecha de hoy (YYYY-MM-DD) en zona Colombia. */

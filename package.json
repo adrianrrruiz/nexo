@@ -11,7 +11,8 @@
     "db:reset": "supabase db reset",
     "gen:types": "supabase gen types typescript --local > src/lib/supabase/types.ts",
     "test:categories": "node --test tests/category-actions.test.mjs",
-    "test:accounts": "node --test tests/account-amounts.test.mjs"
+    "test:accounts": "node --test tests/account-amounts.test.mjs",
+    "test:subscriptions": "node --test tests/subscription-actions.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.26.0",

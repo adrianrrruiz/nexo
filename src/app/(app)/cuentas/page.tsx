@@ -78,37 +78,11 @@ export default async function CuentasPage() {
             </span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/categorias"
-            aria-label="Gestionar categorías"
-            title="Gestionar categorías"
-            className="flex min-h-10 items-center justify-center gap-2 rounded-2xl px-3 text-sm font-medium border border-white/[0.08] bg-white/[0.04] text-neutral-300 transition-colors hover:border-brand/40 hover:text-brand"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 7h10" />
-              <path d="M4 12h8" />
-              <path d="M4 17h10" />
-              <path d="M18 6v12" />
-              <path d="m15.5 8.5 2.5-2.5 2.5 2.5" />
-              <path d="m15.5 15.5 2.5 2.5 2.5-2.5" />
-            </svg>
-            <span>Categorías</span>
-          </Link>
-          <NewAccountButton />
-        </div>
+        <NewAccountButton />
       </header>
 
       {balances.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center">
+        <div className="min-w-0 rounded-3xl border border-dashed border-white/10 p-8 text-center">
           <p className="text-neutral-300">Aún no tienes cuentas.</p>
           <p className="mt-2 text-sm text-neutral-500">
             Usa el botón <span className="font-semibold text-brand">Crear cuenta</span>{' '}
@@ -116,21 +90,21 @@ export default async function CuentasPage() {
           </p>
         </div>
       ) : (
-        <div className="grid items-start gap-7 xl:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-7 xl:grid-cols-2">
           {[...byType.entries()].map(([type, list]) => (
-            <section key={type}>
+            <section key={type} className="min-w-0">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 {TYPE_LABEL[type] ?? type}
               </h2>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                 {list.map((b) => {
                   const reconciliation = reconciliationById.get(b.id)
                   return (
                     <article
                       key={b.id}
-                      className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4 transition-colors hover:border-brand/25 hover:bg-white/[0.05]"
+                      className="min-w-0 rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4 transition-colors hover:border-brand/25 hover:bg-white/[0.05]"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-start gap-2.5">
                         <AccountImageUploader accountId={b.id}>
                           {b.image_path ? (
                             <AccountAvatar
@@ -156,12 +130,12 @@ export default async function CuentasPage() {
                         </AccountImageUploader>
                         <Link
                           href={`/movimientos?cuenta=${b.id}`}
-                          className="flex min-w-0 flex-1 items-center gap-3"
+                          className="flex min-w-0 flex-1 flex-col items-start gap-2"
                           aria-label={`Ver movimientos de ${b.name}`}
                         >
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">{b.name}</p>
-                            <p className="text-xs text-neutral-500">
+                          <div className="min-w-0 w-full">
+                            <p className="break-words text-sm font-medium">{b.name}</p>
+                            <p className="break-words text-xs text-neutral-500">
                               {BANK_LABEL[b.bank]} ·{' '}
                               {b.type === 'credit' && b.credit_limit
                                 ? `Cupo ${formatCOP(Number(b.credit_limit))}`
@@ -176,6 +150,7 @@ export default async function CuentasPage() {
                             {formatCOP(Number(b.balance))}
                           </p>
                         </Link>
+                        <div className="flex shrink-0 flex-col gap-2">
                         <Link
                           href={`/cuentas/${b.id}/extractos`}
                           aria-label={`Ver extractos de ${b.name}`}
@@ -188,8 +163,9 @@ export default async function CuentasPage() {
                           </svg>
                         </Link>
                         <EditAccountButton account={b} />
+                        </div>
                       </div>
-                      <div className="mt-3 flex items-start justify-between gap-3 border-t border-white/[0.06] pt-3">
+                      <div className="mt-3 flex flex-wrap items-start justify-between gap-3 border-t border-white/[0.06] pt-3">
                         <div className="min-w-0">
                           {reconciliation?.reconciled_through ? (
                             <>
@@ -204,7 +180,7 @@ export default async function CuentasPage() {
                               )}
                             </>
                           ) : (
-                            <p className="text-xs text-neutral-500">Aún sin conciliar</p>
+                            <p className="break-words text-xs text-neutral-500">Aún sin conciliar</p>
                           )}
                         </div>
                         <AccountReconciliation

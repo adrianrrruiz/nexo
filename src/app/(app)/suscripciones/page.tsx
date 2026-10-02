@@ -15,6 +15,7 @@ import SubscriptionDueList, {
 import {
   EditSubscriptionButton,
   NewSubscriptionButton,
+  NewServiceButton,
 } from '@/components/SubscriptionManager'
 import type { Account, Category, Subscription } from '@/lib/supabase/types'
 
@@ -80,17 +81,21 @@ export default async function SuscripcionesPage() {
 
   const dueItems: DueSubscription[] = due.map((subscription) => ({
     id: subscription.id,
+    editControl: <EditSubscriptionButton subscription={subscription} accounts={accounts} categories={categories} />,
+    kind: subscription.kind,
+    accountId: subscription.account_id,
+    nextChargeOn: subscription.next_charge_on,
     name: subscription.name,
     amount: Number(subscription.amount),
-    accountName: accountName.get(subscription.account_id) ?? 'Cuenta archivada',
+    accountName: subscription.account_id ? accountName.get(subscription.account_id) ?? 'Cuenta archivada' : 'Cuenta por elegir',
     categoryLabel: describe(subscription),
-    dueLabel: describeDueDate(subscription.next_charge_on, today),
-    overdue: subscription.next_charge_on < today,
+    dueLabel: subscription.kind === 'service' && subscription.next_charge_until ? `${formatLongDate(subscription.next_charge_on)} – ${formatLongDate(subscription.next_charge_until)}` : describeDueDate(subscription.next_charge_on, today),
+    overdue: (subscription.next_charge_until ?? subscription.next_charge_on) < today,
   }))
 
   return (
     <>
-      <header className="mb-6 flex items-start justify-between gap-4 lg:mb-8">
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4 lg:mb-8">
         <div>
           <h1 className="text-xl font-semibold lg:text-2xl">Suscripciones</h1>
           <p className="mt-0.5 text-sm text-neutral-500">
@@ -115,24 +120,24 @@ export default async function SuscripcionesPage() {
           <p className="text-neutral-300">Aún no tienes suscripciones.</p>
           <p className="mt-2 text-sm text-neutral-500">
             Crea una con el botón{' '}
-            <span className="font-semibold text-brand">Nueva</span> y te avisaremos
+            <span className="font-semibold text-brand">Crear suscripción</span> y te avisaremos
             cada vez que llegue la fecha de cobro.
           </p>
         </div>
       ) : (
         <div className="space-y-8">
-          {dueItems.length > 0 && (
+          {dueItems.some(item => item.kind === 'subscription') && (
             <section>
               <h2 className="mb-3 text-sm font-semibold text-neutral-200">
                 Por registrar
               </h2>
-              <SubscriptionDueList items={dueItems} />
+              <SubscriptionDueList items={dueItems.filter(item => item.kind === 'subscription')} accounts={accounts} />
             </section>
           )}
 
           <SubscriptionSection
-            title="Próximas"
-            subscriptions={upcoming}
+            title="Suscripciones próximas"
+            subscriptions={upcoming.filter(item => item.kind === 'subscription')}
             accountName={accountName}
             describe={describe}
             accounts={accounts}
@@ -141,7 +146,7 @@ export default async function SuscripcionesPage() {
 
           <SubscriptionSection
             title="Pausadas"
-            subscriptions={paused}
+            subscriptions={paused.filter(item => item.kind === 'subscription')}
             accountName={accountName}
             describe={describe}
             accounts={accounts}
@@ -150,6 +155,18 @@ export default async function SuscripcionesPage() {
           />
         </div>
       )}
+      <section className="mt-8 border-t border-white/[0.06] pt-6">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0"><h2 className="text-lg font-semibold">Servicios</h2><p className="mt-1 text-sm text-neutral-500">Agua, energía, internet y otros cobros que pueden variar.</p></div>
+          <NewServiceButton accounts={accounts} categories={categories} />
+        </div>
+        {dueItems.some(item => item.kind === 'service') && <div className="mb-6"><h3 className="mb-3 text-sm font-semibold text-neutral-200">Recordatorios de servicios</h3><SubscriptionDueList items={dueItems.filter(item => item.kind === 'service')} accounts={accounts} /></div>}
+        {!subscriptions.some(item => item.kind === 'service') && <p className="rounded-3xl border border-dashed border-white/10 p-5 text-sm leading-relaxed text-neutral-400">Agrega un costo aproximado y un rango de pago. Puedes elegir la cuenta después, al registrar el gasto.</p>}
+        <div className="space-y-6">
+          <SubscriptionSection title="Servicios próximos" subscriptions={upcoming.filter(item => item.kind === 'service')} accountName={accountName} describe={describe} accounts={accounts} categories={categories} />
+          <SubscriptionSection title="Servicios pausados" subscriptions={paused.filter(item => item.kind === 'service')} accountName={accountName} describe={describe} accounts={accounts} categories={categories} muted />
+        </div>
+      </section>
     </>
   )
 }
@@ -182,24 +199,24 @@ function SubscriptionSection({
           return (
             <li
               key={subscription.id}
-              className={`flex items-center gap-3 py-3.5 ${muted ? 'opacity-60' : ''}`}
+              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3.5 ${muted ? 'opacity-60' : ''}`}
             >
-              <div className="min-w-0 flex-1">
+              <div className="col-span-2 min-w-0">
                 <p className="truncate text-sm font-medium text-neutral-100">
                   {subscription.name}
                 </p>
                 <p className="mt-0.5 truncate text-xs text-neutral-500">
                   {FREQUENCY_LABEL[subscription.frequency]} ·{' '}
-                  {accountName.get(subscription.account_id) ?? 'Cuenta archivada'}
+                  {subscription.account_id ? accountName.get(subscription.account_id) ?? 'Cuenta archivada' : 'Cuenta por elegir'}
                   {category ? ` · ${category}` : ''}
                 </p>
               </div>
-              <div className="shrink-0 text-right">
+              <div className="min-w-0 text-left">
                 <p className="text-sm font-semibold tabular-nums text-neutral-100">
-                  {formatCOP(Number(subscription.amount))}
+                  {subscription.kind === 'service' ? '≈ ' : ''}{formatCOP(Number(subscription.amount))}
                 </p>
                 <p className="mt-0.5 text-[11px] capitalize text-neutral-500">
-                  {muted ? 'Pausada' : formatLongDate(subscription.next_charge_on)}
+                  {muted ? 'Pausado' : `${formatLongDate(subscription.next_charge_on)}${subscription.next_charge_until ? ` – ${formatLongDate(subscription.next_charge_until)}` : ''}`}
                 </p>
               </div>
               <EditSubscriptionButton

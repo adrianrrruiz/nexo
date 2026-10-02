@@ -98,9 +98,9 @@ export default function BottomNav() {
 
       <nav
         aria-label="Navegación principal"
-        className="fixed inset-x-0 bottom-4 z-20 flex justify-center px-2 pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-0 bottom-4 z-20 flex justify-center px-1 pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
-        <div className="relative w-full max-w-lg overflow-hidden rounded-full border border-white/20 bg-white/[0.08] px-2 py-2 shadow-[0_18px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150">
+        <div className="relative w-full max-w-lg overflow-hidden rounded-full border border-white/20 bg-white/[0.08] px-1 py-2 shadow-[0_18px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150">
           <div className="pointer-events-none absolute inset-x-3 top-0 h-px bg-white/35" />
           <div className="pointer-events-none absolute -left-8 top-0 h-16 w-24 rounded-full bg-white/10 blur-2xl" />
           <div className="pointer-events-none absolute -right-8 bottom-0 h-16 w-24 rounded-full bg-brand/10 blur-2xl" />
@@ -148,7 +148,7 @@ function NavLink({
                 ? 'bg-brand/[0.12] text-brand shadow-[inset_0_0_0_1px_rgba(29,205,159,0.16)]'
                 : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-100'
             }`
-          : `relative z-10 flex min-w-0 flex-col items-center gap-0.5 rounded-full px-1.5 py-1.5 transition-colors duration-200 ${
+          : `relative z-10 flex min-h-12 min-w-0 flex-col items-center gap-0.5 rounded-full px-0.5 py-1.5 transition-colors duration-200 ${
               active ? 'text-brand' : 'text-neutral-400 hover:text-neutral-100'
             }`
       }
@@ -168,7 +168,7 @@ function NavLink({
       </svg>
       <span
         className={
-          desktop ? '' : 'w-full text-center text-[9px] font-medium'
+          desktop ? '' : 'w-full text-center text-[7px] font-medium min-[350px]:text-[8px] min-[375px]:text-[9px]'
         }
       >
         {item.label}

@@ -46,8 +46,8 @@ export default async function PerfilPage() {
         <h1 className="text-xl font-semibold lg:text-2xl">Perfil</h1>
       </header>
 
-      <div className="mx-auto grid max-w-4xl items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex flex-col items-center rounded-[28px] border border-white/[0.06] bg-white/[0.03] p-8 text-center">
+      <div className="mx-auto grid max-w-4xl grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col items-center rounded-[28px] border border-white/[0.06] bg-white/[0.03] p-8 text-center">
           <ProfileAvatarUploader initial={initial} imageUrl={avatarUrl} />
           <p className="mt-4 max-w-full truncate text-sm font-medium">{displayName}</p>
           <p className="mt-1 max-w-full truncate text-xs text-neutral-500">{email}</p>

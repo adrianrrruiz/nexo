@@ -44,10 +44,13 @@ function CreateAccountDialog({ onClose, onCreateAnother }: { onClose: () => void
   useEffect(() => {
     const dialog = dialogRef.current
     const opener = document.activeElement as HTMLElement | null
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     dialog?.showModal()
     titleRef.current?.focus()
     return () => {
       dialog?.close()
+      document.body.style.overflow = previousOverflow
       opener?.focus()
     }
   }, [])
@@ -88,7 +91,8 @@ function CreateAccountDialog({ onClose, onCreateAnother }: { onClose: () => void
             <input type="hidden" name="type" value={type} />
             <input type="hidden" name="bank" value={bank} />
             <input type="hidden" name="initial_balance" value={openingBalance.toFixed(2)} />
-            <fieldset disabled={pending} className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 sm:px-7">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 sm:px-7">
+            <fieldset disabled={pending} className="min-w-0">
               {step === 1 ? <>
                 <fieldset>
                   <legend className="mb-3 text-sm font-medium text-neutral-300">¿Qué cuenta quieres organizar?</legend>
@@ -113,10 +117,10 @@ function CreateAccountDialog({ onClose, onCreateAnother }: { onClose: () => void
                 </fieldset>
                 {!bank && <p className="mt-3 text-xs text-neutral-500">Elige un banco para continuar.</p>}
               </> : <>
-                <div className="mb-5 flex items-center gap-3 rounded-2xl border border-brand/15 bg-brand/[0.04] p-4">
+                <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-brand/15 bg-brand/[0.04] p-4">
                   <AccountAvatar name={accountName || 'Tu cuenta'} type={type} />
                   <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{accountName || 'Tu cuenta'}</p><p className="mt-1 text-xs text-neutral-500">{bank && BANK_LABEL[bank]} · {typeLabel}</p></div>
-                  <div className="text-right"><p className="text-[10px] text-neutral-500">{type === 'credit' ? 'Deuda actual' : 'Saldo inicial'}</p><p className="mt-1 text-sm font-semibold tabular-nums text-brand">{formatCOP(type === 'credit' ? Math.abs(openingBalance) : openingBalance)}</p></div>
+                  <div className="w-full text-right sm:w-auto"><p className="text-[10px] text-neutral-500">{type === 'credit' ? 'Deuda actual' : 'Saldo inicial'}</p><p className="mt-1 text-sm font-semibold tabular-nums text-brand">{formatCOP(type === 'credit' ? Math.abs(openingBalance) : openingBalance)}</p></div>
                 </div>
                 <label htmlFor={`${id}-name`} className="mb-2 block text-sm font-medium text-neutral-300">¿Cómo quieres llamarla?</label>
                 <input ref={nameRef} id={`${id}-name`} name="name" required maxLength={100} value={accountName} onChange={(event) => setName(event.target.value)} placeholder="Ej. Mi cuenta del día a día" className={FIELD} aria-describedby={`${id}-name-hint`} />
@@ -137,7 +141,8 @@ function CreateAccountDialog({ onClose, onCreateAnother }: { onClose: () => void
                 </div>}
               </>}
             </fieldset>
-            <div className="shrink-0 border-t border-white/[0.06] bg-surface px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 sm:px-7">
+            </div>
+            <div className="relative z-10 shrink-0 border-t border-white/[0.06] bg-surface px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 sm:px-7">
               {state && !state.ok && <p role="alert" className="mb-3 rounded-xl border border-red-400/20 bg-red-400/5 p-3 text-sm text-red-400">{state.message}</p>}
               {step === 1 ? <button type="button" disabled={!bank} onClick={() => setStep(2)} className={PRIMARY}>Continuar <span aria-hidden="true">→</span></button> : <div className="flex gap-3">
                 <button type="button" disabled={pending} onClick={() => setStep(1)} className="min-h-12 rounded-2xl border border-white/[0.08] px-4 text-sm font-medium text-neutral-400 hover:text-white disabled:opacity-40">Atrás</button>

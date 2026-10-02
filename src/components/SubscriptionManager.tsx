@@ -9,6 +9,7 @@ import {
   updateSubscription,
   type SubscriptionState,
 } from '@/app/(app)/suscripciones/actions'
+import CreateSubscriptionButton from '@/components/CreateSubscriptionFlow'
 import AmountField from '@/components/AmountField'
 import DateTextField from '@/components/DateTextField'
 import { sortCategoriesForSelect } from '@/lib/categories'
@@ -34,7 +35,11 @@ export function NewSubscriptionButton({
   accounts: SubscriptionAccount[]
   categories: SubscriptionCategory[]
 }) {
-  return <SubscriptionForm mode="create" accounts={accounts} categories={categories} />
+  return <CreateSubscriptionButton accounts={accounts} categories={categories} />
+}
+
+export function NewServiceButton(props: { accounts: SubscriptionAccount[]; categories: SubscriptionCategory[] }) {
+  return <CreateSubscriptionButton {...props} kind="service" />
 }
 
 export function EditSubscriptionButton({
@@ -77,6 +82,8 @@ function SubscriptionForm({
     subscription ? String(Math.round(Number(subscription.amount) * 100)) : ''
   )
   const [dateValue, setDateValue] = useState(subscription?.next_charge_on ?? today)
+  const [untilValue, setUntilValue] = useState(subscription?.next_charge_until ?? today)
+  const isService = subscription?.kind === 'service'
   const [frequency, setFrequency] = useState<SubscriptionFrequency>(
     subscription?.frequency ?? 'monthly'
   )
@@ -122,6 +129,7 @@ function SubscriptionForm({
       subscription ? String(Math.round(Number(subscription.amount) * 100)) : ''
     )
     setDateValue(subscription?.next_charge_on ?? today)
+    setUntilValue(subscription?.next_charge_until ?? today)
     setFrequency(subscription?.frequency ?? 'monthly')
     setCategoryId(subscription ? subscription.category_id ?? '' : defaultCategoryId)
     setOpen(true)
@@ -174,7 +182,7 @@ function SubscriptionForm({
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/15" />
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold">
-            {mode === 'create' ? 'Nueva suscripción' : 'Editar suscripción'}
+            {mode === 'create' ? 'Nueva suscripción' : isService ? 'Editar servicio' : 'Editar suscripción'}
           </h2>
           <button
             type="button"
@@ -196,6 +204,7 @@ function SubscriptionForm({
         </div>
 
         <form action={action} className="space-y-3">
+          <input type="hidden" name="kind" value={isService ? 'service' : 'subscription'} />
           {subscription && <input type="hidden" name="id" value={subscription.id} />}
 
           <input
@@ -204,26 +213,27 @@ function SubscriptionForm({
             required
             maxLength={80}
             defaultValue={subscription?.name ?? ''}
-            placeholder="Nombre (Netflix, Spotify…)"
-            aria-label="Nombre de la suscripción"
+            placeholder={isService ? 'Nombre (agua, energía, internet…)' : 'Nombre (Netflix, Spotify…)'}
+            aria-label={isService ? 'Nombre del servicio' : 'Nombre de la suscripción'}
             className={FIELD}
           />
 
+          {isService && <p className="text-xs text-neutral-400">Costo aproximado por cobro</p>}
           <AmountField
             name="amount"
             value={amountCents}
             onChange={setAmountCents}
-            label="Monto del cobro"
+            label={isService ? 'Costo aproximado' : 'Monto del cobro'}
           />
 
           <select
             name="account_id"
-            required
+            required={!isService}
             defaultValue={subscription?.account_id ?? ''}
             aria-label="Cuenta de cobro"
             className={FIELD}
           >
-            <option value="">Cuenta de cobro</option>
+            <option value="">{isService ? 'Cuenta opcional: elegir al pagar' : 'Cuenta de cobro'}</option>
             {accounts.map((account) => (
               <option key={account.id} value={account.id}>
                 {account.name}
@@ -268,17 +278,19 @@ function SubscriptionForm({
           </select>
 
           <div>
+            {isService && <p className="mb-2 text-xs text-neutral-400">Inicio del rango de pago</p>}
             <DateTextField
               name="next_charge_on"
               value={dateValue}
               onChange={setDateValue}
-              label="Próximo cobro"
+              label={isService ? 'Inicio del rango de pago' : 'Próximo cobro'}
             />
             <p className="mt-1.5 px-1 text-xs text-neutral-500">
-              Próximo cobro. Ese día te la recordamos para registrarla.
+              {isService ? 'El recordatorio aparece al comenzar el rango de pago.' : 'Próximo cobro. Ese día te la recordamos para registrarla.'}
             </p>
           </div>
 
+          {isService && <div><p className="mb-2 text-xs text-neutral-400">Final del rango de pago</p><DateTextField name="next_charge_until" value={untilValue} onChange={setUntilValue} label="Final del rango de pago" /></div>}
           <input
             type="text"
             name="note"

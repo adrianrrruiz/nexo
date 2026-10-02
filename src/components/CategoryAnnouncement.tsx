@@ -15,7 +15,7 @@ export default function CategoryAnnouncement() {
       <p className="text-xs font-semibold uppercase tracking-wider text-brand">Novedad en Nexo</p>
       <h2 id="category-announcement-title" className="mt-2 text-lg font-semibold">Tus categorías, más fáciles de encontrar</h2>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-300">
-        Ahora tienes el botón <strong className="text-white">Categorías</strong> en la barra de navegación de abajo (o en el menú lateral si usas computador). También lo encontrarás en <strong className="text-white">Cuentas → Categorías</strong>.
+        Ahora tienes el botón <strong className="text-white">Categorías</strong> en la barra de navegación de abajo (o en el menú lateral si usas computador).
         Elige sugerencias de gastos e ingresos o usa <strong className="text-white">Crear categoría</strong> para añadir las tuyas.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">

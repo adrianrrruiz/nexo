@@ -132,11 +132,14 @@ export type Subscription = {
   user_id: string
   name: string
   amount: number
-  account_id: string
+  kind: 'subscription' | 'service'
+  account_id: string | null
   category_id: string | null
   frequency: SubscriptionFrequency
   started_on: string
+  started_until: string | null
   next_charge_on: string
+  next_charge_until: string | null
   last_charged_on: string | null
   note: string | null
   active: boolean
@@ -278,11 +281,14 @@ export interface Database {
           user_id: string
           name: string
           amount: number
-          account_id: string
+          kind?: 'subscription' | 'service'
+          account_id?: string | null
           category_id?: string | null
           frequency?: SubscriptionFrequency
           started_on: string
+          started_until?: string | null
           next_charge_on: string
+          next_charge_until?: string | null
           last_charged_on?: string | null
           note?: string | null
           active?: boolean
@@ -299,7 +305,12 @@ export interface Database {
         Relationships: []
       }
     }
-    Functions: Record<never, never>
+    Functions: {
+      process_recurring_charge: {
+        Args: { p_subscription_id: string; p_expected_charge_on: string; p_skip?: boolean; p_amount?: number; p_account_id?: string; p_charged_on?: string }
+        Returns: undefined
+      }
+    }
     Enums: {
       account_type: AccountType
       supported_bank: SupportedBank

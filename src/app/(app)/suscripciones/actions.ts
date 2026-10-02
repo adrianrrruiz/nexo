@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { advanceChargeDate, isSubscriptionFrequency } from '@/lib/subscriptions'
+import { isSubscriptionFrequency } from '@/lib/subscriptions'
+import { parseAccountAmount } from '@/lib/account-amounts'
 import type { SubscriptionFrequency } from '@/lib/supabase/types'
 
 export type SubscriptionState = { ok: boolean; message: string } | null
@@ -22,24 +23,25 @@ function revalidate() {
   revalidatePath('/cuentas')
 }
 
-function parseAmount(value: FormDataEntryValue | null) {
-  const raw = String(value ?? '').replace(/[^\d,.-]/g, '').replace(',', '.')
-  return Number(raw || 0)
-}
-
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+function isValidDate(value: string) {
+  if (!DATE_PATTERN.test(value)) return false
+  const date = new Date(`${value}T12:00:00Z`)
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
 
 function parseSubscriptionForm(formData: FormData) {
   const rawFrequency = String(formData.get('frequency') ?? 'monthly')
   return {
     name: String(formData.get('name') ?? '').trim(),
-    amount: parseAmount(formData.get('amount')),
-    account_id: String(formData.get('account_id') ?? ''),
+    amount: parseAccountAmount(String(formData.get('amount') ?? '')),
+    kind: String(formData.get('kind') ?? 'subscription'),
+    account_id: String(formData.get('account_id') ?? '') || null,
     category_id: String(formData.get('category_id') ?? '') || null,
-    frequency: (isSubscriptionFrequency(rawFrequency)
-      ? rawFrequency
-      : 'monthly') as SubscriptionFrequency,
+    frequency: rawFrequency as SubscriptionFrequency,
     next_charge_on: String(formData.get('next_charge_on') ?? ''),
+    next_charge_until: String(formData.get('next_charge_until') ?? '') || null,
     note: String(formData.get('note') ?? '').trim() || null,
   }
 }
@@ -47,9 +49,12 @@ function parseSubscriptionForm(formData: FormData) {
 function validate(input: ReturnType<typeof parseSubscriptionForm>) {
   if (!input.name) return 'Escribe el nombre de la suscripción.'
   if (input.name.length > 80) return 'El nombre es demasiado largo.'
-  if (!input.amount || input.amount <= 0) return 'Monto inválido.'
-  if (!input.account_id) return 'Elige la cuenta de cobro.'
-  if (!DATE_PATTERN.test(input.next_charge_on)) return 'Fecha inválida.'
+  if (!Number.isFinite(input.amount) || input.amount <= 0) return 'Escribe un monto válido, mayor que cero.'
+  if (!['subscription', 'service'].includes(input.kind)) return 'Tipo de cobro inválido.'
+  if (!isSubscriptionFrequency(input.frequency)) return 'Periodicidad inválida.'
+  if (input.kind === 'subscription' && !input.account_id) return 'Elige la cuenta de cobro.'
+  if (!isValidDate(input.next_charge_on)) return 'Elige una fecha válida.'
+  if (input.kind === 'service' && (!input.next_charge_until || !isValidDate(input.next_charge_until) || input.next_charge_until < input.next_charge_on)) return 'El final del rango debe ser igual o posterior al inicio.'
   return null
 }
 
@@ -66,6 +71,7 @@ export async function createSubscription(
 
   const { error } = await supabase.from('subscriptions').insert({
     user_id: userId,
+    kind: input.kind as 'subscription' | 'service',
     name: input.name,
     amount: input.amount,
     account_id: input.account_id,
@@ -74,6 +80,8 @@ export async function createSubscription(
     // el primer cobro ancla el día del mes de los siguientes
     started_on: input.next_charge_on,
     next_charge_on: input.next_charge_on,
+    started_until: input.kind === 'service' ? input.next_charge_until : null,
+    next_charge_until: input.kind === 'service' ? input.next_charge_until : null,
     note: input.note,
   })
 
@@ -85,7 +93,7 @@ export async function createSubscription(
   }
 
   revalidate()
-  return { ok: true, message: 'Suscripción creada.' }
+  return { ok: true, message: input.kind === 'service' ? 'Servicio creado.' : 'Suscripción creada.' }
 }
 
 export async function updateSubscription(
@@ -105,6 +113,7 @@ export async function updateSubscription(
   const { error } = await supabase
     .from('subscriptions')
     .update({
+      kind: input.kind as 'subscription' | 'service',
       name: input.name,
       amount: input.amount,
       account_id: input.account_id,
@@ -112,6 +121,8 @@ export async function updateSubscription(
       frequency: input.frequency,
       started_on: input.next_charge_on,
       next_charge_on: input.next_charge_on,
+      started_until: input.kind === 'service' ? input.next_charge_until : null,
+      next_charge_until: input.kind === 'service' ? input.next_charge_until : null,
       note: input.note,
     })
     .eq('id', id)
@@ -125,7 +136,7 @@ export async function updateSubscription(
   }
 
   revalidate()
-  return { ok: true, message: 'Suscripción actualizada.' }
+  return { ok: true, message: input.kind === 'service' ? 'Servicio actualizado.' : 'Suscripción actualizada.' }
 }
 
 export async function deleteSubscription(
@@ -186,108 +197,43 @@ export async function toggleSubscription(
   }
 }
 
-/**
- * Registra el cobro pendiente como gasto y adelanta la suscripción al siguiente
- * periodo. Solo avanza un periodo por confirmación: si venía atrasada, vuelve a
- * aparecer como pendiente para registrar cada cobro que faltó.
- */
-export async function confirmSubscriptionCharge(
-  _prev: SubscriptionState,
-  formData: FormData
-): Promise<SubscriptionState> {
+/** Confirming and dismissing reminders are atomic, scoped to the logged-in user. */
+async function processCharge(formData: FormData, skip: boolean): Promise<SubscriptionState> {
   const { supabase, userId } = await getUserId()
   if (!userId) return { ok: false, message: 'Sesión expirada.' }
-
   const id = String(formData.get('id') ?? '')
-  if (!id) return { ok: false, message: 'Suscripción inválida.' }
-
-  // El cliente solo envía el id; el resto se relee de la fila del usuario.
-  const { data: subscription, error: lookupError } = await supabase
-    .from('subscriptions')
-    .select('id,name,amount,account_id,category_id,frequency,started_on,next_charge_on,note')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  if (lookupError) return { ok: false, message: lookupError.message }
-  if (!subscription) return { ok: false, message: 'Suscripción no encontrada.' }
-
-  const chargedOn = subscription.next_charge_on
-  const occurred_at = new Date(`${chargedOn}T12:00:00-05:00`).toISOString()
-
-  const { error: transactionError } = await supabase.from('transactions').insert({
-    user_id: userId,
-    type: 'expense',
-    amount: Number(subscription.amount),
-    occurred_at,
-    account_id: subscription.account_id,
-    category_id: subscription.category_id,
-    note: subscription.note ? `${subscription.name} · ${subscription.note}` : subscription.name,
-    source: 'subscription',
-    subscription_id: subscription.id,
-  })
-
-  if (transactionError) return { ok: false, message: transactionError.message }
-
-  const { error: advanceError } = await supabase
-    .from('subscriptions')
-    .update({
-      last_charged_on: chargedOn,
-      next_charge_on: advanceChargeDate(
-        chargedOn,
-        subscription.frequency,
-        subscription.started_on
-      ),
-    })
-    .eq('id', id)
-    .eq('user_id', userId)
-
-  if (advanceError) {
-    return {
-      ok: false,
-      message: 'Se registró el movimiento, pero no se pudo actualizar la fecha.',
+  const expected = String(formData.get('expected_charge_on') ?? '')
+  if (!id || !isValidDate(expected)) return { ok: false, message: 'Recordatorio inválido. Recarga la página.' }
+  const args: { p_subscription_id: string; p_expected_charge_on: string; p_skip: boolean; p_amount?: number; p_account_id?: string; p_charged_on?: string } = {
+    p_subscription_id: id, p_expected_charge_on: expected, p_skip: skip,
+  }
+  if (!skip) {
+    if (formData.has('amount')) {
+      const amount = parseAccountAmount(String(formData.get('amount') ?? ''))
+      if (!Number.isFinite(amount) || amount <= 0) return { ok: false, message: 'Escribe un monto válido.' }
+      args.p_amount = amount
+    }
+    if (formData.has('account_id')) {
+      const accountId = String(formData.get('account_id') ?? '')
+      if (!accountId) return { ok: false, message: 'Elige la cuenta desde la que pagaste.' }
+      args.p_account_id = accountId
+    }
+    if (formData.has('charged_on')) {
+      const date = String(formData.get('charged_on') ?? '')
+      if (!isValidDate(date)) return { ok: false, message: 'Elige una fecha válida.' }
+      args.p_charged_on = date
     }
   }
-
+  const { error } = await supabase.rpc('process_recurring_charge', args)
+  if (error) return { ok: false, message: error.message }
   revalidate()
-  return { ok: true, message: `${subscription.name} registrada.` }
+  return { ok: true, message: skip ? 'Recordatorio cerrado para este período.' : 'Gasto registrado.' }
 }
 
-/** Salta el cobro pendiente: no crea movimiento, solo pasa al siguiente periodo. */
-export async function skipSubscriptionCharge(
-  _prev: SubscriptionState,
-  formData: FormData
-): Promise<SubscriptionState> {
-  const { supabase, userId } = await getUserId()
-  if (!userId) return { ok: false, message: 'Sesión expirada.' }
+export async function confirmSubscriptionCharge(_prev: SubscriptionState, formData: FormData): Promise<SubscriptionState> {
+  return processCharge(formData, false)
+}
 
-  const id = String(formData.get('id') ?? '')
-  if (!id) return { ok: false, message: 'Suscripción inválida.' }
-
-  const { data: subscription, error: lookupError } = await supabase
-    .from('subscriptions')
-    .select('frequency,started_on,next_charge_on')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  if (lookupError) return { ok: false, message: lookupError.message }
-  if (!subscription) return { ok: false, message: 'Suscripción no encontrada.' }
-
-  const { error } = await supabase
-    .from('subscriptions')
-    .update({
-      next_charge_on: advanceChargeDate(
-        subscription.next_charge_on,
-        subscription.frequency,
-        subscription.started_on
-      ),
-    })
-    .eq('id', id)
-    .eq('user_id', userId)
-
-  if (error) return { ok: false, message: error.message }
-
-  revalidate()
-  return { ok: true, message: 'Cobro omitido.' }
+export async function skipSubscriptionCharge(_prev: SubscriptionState, formData: FormData): Promise<SubscriptionState> {
+  return processCharge(formData, true)
 }

@@ -8,11 +8,13 @@ export default function DateTextField({
   value,
   onChange,
   label = 'Fecha del movimiento',
+  required = false,
 }: {
   name: string
   value: string
   onChange: (value: string) => void
   label?: string
+  required?: boolean
 }) {
   return (
     <div className="relative">
@@ -25,6 +27,7 @@ export default function DateTextField({
       */}
       <input
         type="date"
+        required={required}
         name={name}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -41,10 +44,10 @@ export default function DateTextField({
         className="peer absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none opacity-0"
       />
       <div className="pointer-events-none flex w-full items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.05] px-4 py-3.5 text-left text-base text-neutral-100 transition-colors peer-focus:border-brand/60">
-        <span className="capitalize">{formatLongDate(value)}</span>
+        <span className="min-w-0 break-words capitalize">{formatLongDate(value)}</span>
         <svg
           viewBox="0 0 24 24"
-          className="h-5 w-5 text-neutral-400"
+          className="h-5 w-5 shrink-0 text-neutral-400"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.8"
