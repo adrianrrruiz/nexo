@@ -120,7 +120,7 @@ export default function QuickEntry({
     return (
       <button
         onClick={openPanel}
-        className="fixed bottom-24 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-deep text-neutral-950 shadow-lg shadow-brand/25 transition-transform active:scale-95 lg:bottom-8 lg:right-8 lg:h-auto lg:w-auto lg:gap-2 lg:rounded-2xl lg:px-5 lg:py-3.5"
+        className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-deep text-neutral-950 shadow-lg shadow-brand/25 transition-transform active:scale-95 lg:bottom-8 lg:right-8 lg:h-auto lg:w-auto lg:gap-2 lg:rounded-2xl lg:px-5 lg:py-3.5"
         aria-label="Nuevo movimiento"
       >
         <svg
