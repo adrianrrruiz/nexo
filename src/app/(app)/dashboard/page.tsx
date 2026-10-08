@@ -16,6 +16,7 @@ import {
   categoryLabel,
   UNCATEGORIZED_KEY,
   UNCATEGORIZED_LABEL,
+  categoryDisplayName,
 } from '@/lib/categories'
 import { getTransactionMeta } from '@/lib/transaction-meta'
 import type {
@@ -55,7 +56,7 @@ export default async function DashboardPage() {
     supabase.from('accounts').select('id,name,type,image_path').eq('archived', false),
     supabase
       .from('categories')
-      .select('id,name,kind,parent_id')
+      .select('id,name,kind,parent_id,icon')
       .eq('user_id', user.id)
       .eq('is_suggested', false),
     supabase
@@ -101,7 +102,7 @@ export default async function DashboardPage() {
   )
   const categories = (categoriesRes.data ?? []) as Pick<
     Category,
-    'id' | 'name' | 'kind' | 'parent_id'
+    'id' | 'name' | 'kind' | 'parent_id' | 'icon'
   >[]
   const recent = (recentRes.data ?? []) as Transaction[]
   const month = (monthRes.data ?? []) as Pick<
@@ -118,7 +119,7 @@ export default async function DashboardPage() {
   const accountImagePath = new Map(accounts.map((a) => [a.id, a.image_path]))
   const accountImageUrl = await createAccountImageUrlMap(accounts.map((a) => a.image_path))
   const profileAvatarUrl = await createProfileAvatarUrl(profile?.avatar_path ?? null)
-  const categoryName = new Map(categories.map((c) => [c.id, c.name]))
+  const categoryName = new Map(categories.map((c) => [c.id, categoryDisplayName(c)]))
   const categoryParent = new Map(categories.map((c) => [c.id, c.parent_id]))
 
   const dueItems: DueSubscription[] = dueSubscriptions.map((subscription) => ({

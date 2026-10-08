@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
+import { categoryDisplayName } from '@/lib/categories'
 import { authenticateShortcut } from '@/lib/shortcuts/auth'
 
 export const runtime = 'nodejs'
@@ -71,7 +72,7 @@ export async function GET(request: Request) {
       .order('name'),
     auth.admin
       .from('categories')
-      .select('id,name,kind,parent_id')
+      .select('id,name,kind,parent_id,icon')
       .eq('user_id', auth.userId)
       .eq('is_suggested', false)
       .order('name'),
@@ -83,12 +84,12 @@ export async function GET(request: Request) {
 
   const accounts = accountsResult.data ?? []
   const rawCategories = categoriesResult.data ?? []
-  const namesById = new Map(rawCategories.map((category) => [category.id, category.name]))
+  const namesById = new Map(rawCategories.map((category) => [category.id, categoryDisplayName(category)]))
   const categoriesWithLabels = rawCategories.map((category) => ({
     ...category,
     label: category.parent_id && namesById.has(category.parent_id)
-      ? `${namesById.get(category.parent_id)} / ${category.name}`
-      : category.name,
+      ? `${namesById.get(category.parent_id)} / ${categoryDisplayName(category)}`
+      : categoryDisplayName(category),
   }))
   const labelCounts = new Map<string, number>()
   for (const category of categoriesWithLabels) {

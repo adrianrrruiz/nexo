@@ -16,7 +16,7 @@ export default function EditableTransactionRow({
 }: {
   transaction: Transaction
   accounts: Pick<Account, 'id' | 'name' | 'type' | 'image_path'>[]
-  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>[]
+  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id' | 'icon'>[]
   label: string
   sublabel: string
   accountName?: string

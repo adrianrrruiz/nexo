@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { categoryLabel } from '@/lib/categories'
+import { categoryDisplayName, categoryLabel } from '@/lib/categories'
 import { formatCOP, formatLongDate } from '@/lib/format'
 import {
   FREQUENCY_LABEL,
@@ -37,7 +37,7 @@ export default async function SuscripcionesPage() {
     supabase.from('accounts').select('id,name').eq('archived', false).order('name'),
     supabase
       .from('categories')
-      .select('id,name,kind,parent_id')
+      .select('id,name,kind,parent_id,icon')
       .eq('user_id', user.id)
       .eq('is_suggested', false),
   ])
@@ -51,11 +51,11 @@ export default async function SuscripcionesPage() {
   const accounts = (accountsRes.data ?? []) as Pick<Account, 'id' | 'name'>[]
   const categories = (categoriesRes.data ?? []) as Pick<
     Category,
-    'id' | 'name' | 'kind' | 'parent_id'
+    'id' | 'name' | 'kind' | 'parent_id' | 'icon'
   >[]
 
   const accountName = new Map(accounts.map((account) => [account.id, account.name]))
-  const categoryName = new Map(categories.map((category) => [category.id, category.name]))
+  const categoryName = new Map(categories.map((category) => [category.id, categoryDisplayName(category)]))
   const categoryParent = new Map(
     categories.map((category) => [category.id, category.parent_id])
   )
@@ -185,7 +185,7 @@ function SubscriptionSection({
   accountName: Map<string, string>
   describe: (subscription: Subscription) => string | null
   accounts: Pick<Account, 'id' | 'name'>[]
-  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>[]
+  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id' | 'icon'>[]
   muted?: boolean
 }) {
   if (subscriptions.length === 0) return null

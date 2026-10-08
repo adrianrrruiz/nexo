@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { addTransaction, type EntryState } from '@/app/(app)/dashboard/actions'
 import AmountField from '@/components/AmountField'
 import DateTextField from '@/components/DateTextField'
-import { sortCategoriesForSelect } from '@/lib/categories'
+import { categoryDisplayName, sortCategoriesForSelect } from '@/lib/categories'
 import { formatDateInputValue } from '@/lib/format'
 import { createClient } from '@/lib/supabase/client'
 import type { Account, Category, TransactionType } from '@/lib/supabase/types'
@@ -38,7 +38,7 @@ export default function QuickEntry({
   trigger,
 }: {
   accounts: Pick<Account, 'id' | 'name'>[]
-  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>[]
+  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id' | 'icon'>[]
   defaultDate?: string
   trigger?: React.ReactNode
 }) {
@@ -81,7 +81,7 @@ export default function QuickEntry({
     const supabase = createClient()
     const { data, error } = await supabase
       .from('categories')
-      .select('id,name,kind,parent_id')
+      .select('id,name,kind,parent_id,icon')
       .eq('is_suggested', false)
       .order('kind')
       .order('name')
@@ -90,7 +90,7 @@ export default function QuickEntry({
       setCategoryError('No pudimos actualizar las categorías. Intenta de nuevo.')
     } else {
       setAvailableCategories(
-        (data ?? []) as Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>[]
+        (data ?? []) as Pick<Category, 'id' | 'name' | 'kind' | 'parent_id' | 'icon'>[]
       )
     }
     setLoadingCategories(false)
@@ -226,11 +226,11 @@ export default function QuickEntry({
                     a.name.localeCompare(b.name, 'es')
                   )
                   return (
-                    <optgroup key={parent.id} label={parent.name}>
-                      <option value={parent.id}>{parent.name}</option>
+                    <optgroup key={parent.id} label={categoryDisplayName(parent)}>
+                      <option value={parent.id}>{categoryDisplayName(parent)}</option>
                       {children.map((child) => (
                         <option key={child.id} value={child.id}>
-                          {child.name}
+                          {categoryDisplayName(child)}
                         </option>
                       ))}
                     </optgroup>

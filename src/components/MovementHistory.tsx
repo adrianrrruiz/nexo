@@ -6,7 +6,7 @@ import QuickEntry from '@/components/QuickEntry'
 import EditableTransactionRow from '@/components/EditableTransactionRow'
 import { loadOlderMovementMonth } from '@/app/(app)/movimientos/actions'
 import { formatCOP, formatDateInputValue, formatDay, formatMonth } from '@/lib/format'
-import { categoryGroupId, categoryLabel, UNCATEGORIZED_KEY, UNCATEGORIZED_LABEL } from '@/lib/categories'
+import { categoryDisplayName, categoryGroupId, categoryLabel, UNCATEGORIZED_KEY, UNCATEGORIZED_LABEL } from '@/lib/categories'
 import { getTransactionMeta } from '@/lib/transaction-meta'
 import type { MovementMonth } from '@/lib/movement-history'
 import type { Account, Category, Transaction, TransactionType } from '@/lib/supabase/types'
@@ -20,7 +20,7 @@ function categoriaHref(categoriaId: string, accountId: string, reconciliationMod
 }
 
 type AccountItem = Pick<Account, 'id' | 'name' | 'type' | 'image_path'>
-type CategoryItem = Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>
+type CategoryItem = Pick<Category, 'id' | 'name' | 'kind' | 'parent_id' | 'icon'>
 
 export default function MovementHistory({
   initialMonth,
@@ -99,7 +99,7 @@ export default function MovementHistory({
   const accountType = new Map(accounts.map((account) => [account.id, account.type]))
   const accountImagePath = new Map(accounts.map((account) => [account.id, account.image_path]))
   const accountImageUrl = new Map(Object.entries(imageUrls))
-  const categoryName = new Map(categories.map((category) => [category.id, category.name]))
+  const categoryName = new Map(categories.map((category) => [category.id, categoryDisplayName(category)]))
   const categoryParent = new Map(categories.map((category) => [category.id, category.parent_id]))
   const loadedCount = pages.reduce((count, page) => count + page.transactions.length, 0)
 
@@ -226,7 +226,7 @@ function MonthTransactionList({
 }: {
   transactions: Transaction[]
   accounts: Pick<Account, 'id' | 'name' | 'type' | 'image_path'>[]
-  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>[]
+  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id' | 'icon'>[]
   accountName: Map<string, string>
   accountType: Map<string, Account['type']>
   accountImagePath: Map<string, string | null>

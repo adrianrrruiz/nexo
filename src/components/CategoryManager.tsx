@@ -8,10 +8,20 @@ import {
   updateCategory,
   type CategoryState,
 } from '@/app/(app)/categorias/actions'
+import { categoryDisplayName, categoryParts } from '@/lib/categories'
+import { DEFAULT_CATEGORY_SUGGESTIONS } from '@/lib/category-suggestions'
 import type { Category, CategoryKind } from '@/lib/supabase/types'
 
 const FIELD =
   'w-full rounded-2xl border border-white/[0.06] bg-white/[0.05] px-4 py-3.5 text-base outline-none focus:border-brand/60'
+const ICON_FIELD =
+  'w-16 shrink-0 rounded-2xl border border-white/[0.06] bg-white/[0.05] py-3 text-center text-2xl outline-none placeholder:opacity-40 focus:border-brand/60'
+
+/** Conserva solo el último emoji escrito, para que uno nuevo reemplace al anterior. */
+function lastGrapheme(value: string) {
+  const segments = [...new Intl.Segmenter('es', { granularity: 'grapheme' }).segment(value.trim())]
+  return segments.at(-1)?.segment ?? ''
+}
 
 type CategorySuggestion = Pick<Category, 'id' | 'name' | 'kind' | 'color' | 'icon'>
 
@@ -127,6 +137,8 @@ function CategoryForm({
     return () => dialog?.close()
   }, [open])
   const [kind, setKind] = useState<CategoryKind>(category?.kind ?? parentCategory?.kind ?? 'expense')
+  const initial = category ? categoryParts(category) : { icon: null, name: '' }
+  const [icon, setIcon] = useState(initial.icon ?? '')
   const [state, action, pending] = useActionState<CategoryState, FormData>(
     mode === 'create' ? createCategory : updateCategory,
     null
@@ -151,6 +163,9 @@ function CategoryForm({
       item.kind === kind &&
       !existingRootNames.has(`${item.kind}:${item.name.trim().toLocaleLowerCase('es')}`)
   )
+  const iconChoices = DEFAULT_CATEGORY_SUGGESTIONS.filter((item) => item.kind === kind).map(
+    (item) => item.icon as string
+  )
 
   return (
     <>
@@ -158,6 +173,7 @@ function CategoryForm({
         type="button"
         onClick={() => {
           setKind(category?.kind ?? parentCategory?.kind ?? 'expense')
+          setIcon(initial.icon ?? '')
           setOpen(true)
         }}
         className={
@@ -199,20 +215,47 @@ function CategoryForm({
                 </button>
               </div>
 
-              {parentCategory && <p className="mb-4 text-sm text-neutral-400">Agrupa tus movimientos dentro de <span className="font-medium text-brand">{parentCategory.name}</span>.</p>}
+              {parentCategory && <p className="mb-4 text-sm text-neutral-400">Agrupa tus movimientos dentro de <span className="font-medium text-brand">{categoryDisplayName(parentCategory)}</span>.</p>}
 
               <form action={action} className="space-y-3">
                 {category && <input type="hidden" name="id" value={category.id} />}
                 <label className="block text-sm text-neutral-300" htmlFor="category-name">{parentCategory ? 'Nombre de la subcategoría' : 'Nombre de la categoría'}</label>
-                <input
-                  id="category-name"
-                  autoFocus
-                  name="name"
-                  required
-                  defaultValue={category?.name ?? ''}
-                  placeholder="Ej. Mascotas, Viajes o Proyectos"
-                  className={FIELD}
-                />
+                <div className="flex gap-2">
+                  <input
+                    name="icon"
+                    value={icon}
+                    onChange={(event) => setIcon(lastGrapheme(event.target.value))}
+                    aria-label="Icono de la categoría (emoji)"
+                    placeholder="🏷️"
+                    autoComplete="off"
+                    className={ICON_FIELD}
+                  />
+                  <input
+                    id="category-name"
+                    autoFocus
+                    name="name"
+                    required
+                    defaultValue={initial.name}
+                    placeholder="Ej. Mascotas, Viajes o Proyectos"
+                    className={FIELD}
+                  />
+                </div>
+                <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" aria-label="Iconos sugeridos">
+                  {iconChoices.map((choice) => (
+                    <button
+                      key={choice}
+                      type="button"
+                      aria-label={`Usar ${choice} como icono`}
+                      aria-pressed={icon === choice}
+                      onClick={() => setIcon(icon === choice ? '' : choice)}
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-lg transition-colors ${
+                        icon === choice ? 'border-brand/60 bg-brand/10' : 'border-white/[0.06] bg-white/[0.03] hover:border-brand/30'
+                      }`}
+                    >
+                      {choice}
+                    </button>
+                  ))}
+                </div>
                 <label className="block text-sm text-neutral-300" htmlFor="category-kind">Tipo de movimiento</label>
                 <select
                   id="category-kind"
@@ -229,7 +272,7 @@ function CategoryForm({
                   <option value="">Categoría principal</option>
                   {parentOptions.map((item) => (
                     <option key={item.id} value={item.id}>
-                      Subcategoría de {item.name}
+                      Subcategoría de {categoryDisplayName(item)}
                     </option>
                   ))}
                 </select>

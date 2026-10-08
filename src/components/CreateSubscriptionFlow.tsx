@@ -5,7 +5,7 @@ import { useActionState, useEffect, useId, useRef, useState } from 'react'
 import { createSubscription, type SubscriptionState } from '@/app/(app)/suscripciones/actions'
 import AmountField from '@/components/AmountField'
 import DateTextField from '@/components/DateTextField'
-import { sortCategoriesForSelect } from '@/lib/categories'
+import { categoryDisplayName, sortCategoriesForSelect } from '@/lib/categories'
 import { formatCOP, formatLongDate } from '@/lib/format'
 import { findSubscriptionCategoryId, FREQUENCIES, FREQUENCY_LABEL, monthlyEquivalent, todayInBogota } from '@/lib/subscriptions'
 import type { Account, Category, SubscriptionFrequency } from '@/lib/supabase/types'
@@ -13,7 +13,7 @@ import type { Account, Category, SubscriptionFrequency } from '@/lib/supabase/ty
 type Props = {
   kind?: 'subscription' | 'service'
   accounts: Pick<Account, 'id' | 'name'>[]
-  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>[]
+  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id' | 'icon'>[]
 }
 const FIELD = 'w-full rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3.5 text-base outline-none focus:border-brand/60 focus:ring-2 focus:ring-brand/10'
 const PRIMARY = 'flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-brand-deep px-4 py-3.5 text-sm font-semibold text-neutral-950 disabled:opacity-40'
@@ -46,7 +46,7 @@ function SubscriptionDialog({ accounts, categories, kind = 'subscription', onClo
   const [state, action, pending] = useActionState<SubscriptionState, FormData>(createSubscription, null)
   const amountValue = Number(amount || '0') / 100
   const expenseCategories = sortCategoriesForSelect(categories.filter(category => category.kind === 'expense'))
-  const categoryNames = new Map(expenseCategories.map(category => [category.id, category.name]))
+  const categoryNames = new Map(expenseCategories.map(category => [category.id, categoryDisplayName(category)]))
   const accountName = accounts.find(account => account.id === accountId)?.name
   const canContinue = Boolean(name.trim() && Number.isFinite(amountValue) && amountValue > 0)
 
@@ -148,7 +148,7 @@ function SubscriptionDialog({ accounts, categories, kind = 'subscription', onClo
                 <label htmlFor={`${id}-category`} className="mb-2 block text-sm font-medium">Categoría <span className="text-neutral-500">(opcional)</span></label>
                 <select id={`${id}-category`} name="category_id" value={categoryId} onChange={event => setCategoryId(event.target.value)} className={FIELD}>
                   <option value="">Sin categoría</option>
-                  {expenseCategories.map(category => <option key={category.id} value={category.id}>{category.parent_id ? `${categoryNames.get(category.parent_id) ?? ''} → ` : ''}{category.name}</option>)}
+                  {expenseCategories.map(category => <option key={category.id} value={category.id}>{category.parent_id ? `${categoryNames.get(category.parent_id) ?? ''} → ` : ''}{categoryDisplayName(category)}</option>)}
                 </select>
               </div>
               <details className="rounded-2xl border border-white/[0.06] p-4">

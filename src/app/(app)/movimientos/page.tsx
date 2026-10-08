@@ -11,6 +11,7 @@ import {
   categoryIdsInGroup,
   UNCATEGORIZED_KEY,
   UNCATEGORIZED_LABEL,
+  categoryDisplayName,
 } from '@/lib/categories'
 import { loadMovementMonth } from '@/lib/movement-history'
 import type { Account, Category } from '@/lib/supabase/types'
@@ -45,7 +46,7 @@ export default async function MovimientosPage({
       .eq('archived', false),
     supabase
       .from('categories')
-      .select('id,name,kind,parent_id')
+      .select('id,name,kind,parent_id,icon')
       .eq('user_id', user.id)
       .eq('is_suggested', false),
   ])
@@ -61,7 +62,7 @@ export default async function MovimientosPage({
   >[]
   const categories = (categoriesRes.data ?? []) as Pick<
     Category,
-    'id' | 'name' | 'kind' | 'parent_id'
+    'id' | 'name' | 'kind' | 'parent_id' | 'icon'
   >[]
   const selectedAccount = accounts.find((account) => account.id === selectedAccountId)
   const reconciledThrough = selectedAccount?.reconciled_through ?? null
@@ -85,7 +86,7 @@ export default async function MovimientosPage({
     ? accountName.get(selectedAccountId) ?? 'esta cuenta'
     : null
   const accountImageUrl = await createAccountImageUrlMap(accounts.map((a) => a.image_path))
-  const categoryName = new Map(categories.map((c) => [c.id, c.name]))
+  const categoryName = new Map(categories.map((c) => [c.id, categoryDisplayName(c)]))
   const selectedCategoryName = selectedCategoryId
     ? selectedCategoryId === UNCATEGORIZED_KEY
       ? UNCATEGORIZED_LABEL

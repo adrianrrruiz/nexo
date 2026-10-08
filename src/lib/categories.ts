@@ -6,6 +6,25 @@ type CategoryLite = Pick<Category, 'id' | 'name' | 'parent_id'>
 export const UNCATEGORIZED_KEY = 'sin'
 export const UNCATEGORIZED_LABEL = 'Sin categoría'
 
+const LEADING_EMOJI =
+  /^((?:\p{Extended_Pictographic}|\p{Regional_Indicator})[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\u200D\uFE0F]*)\s*/u
+
+/** Nombre visible en listas y selectores: el emoji de la categoría seguido del nombre. */
+export function categoryDisplayName(category: Pick<Category, 'name' | 'icon'>) {
+  return category.icon ? `${category.icon} ${category.name}` : category.name
+}
+
+/**
+ * Icono y nombre por separado. Las categorías creadas antes de poder editar el
+ * icono suelen llevar el emoji escrito al inicio del nombre: se toma como icono.
+ */
+export function categoryParts(category: Pick<Category, 'name' | 'icon'>) {
+  if (category.icon) return { icon: category.icon, name: category.name }
+  const match = category.name.match(LEADING_EMOJI)
+  const rest = match ? category.name.slice(match[0].length) : ''
+  return match && rest ? { icon: match[1], name: rest } : { icon: null, name: category.name }
+}
+
 export function categoryLabel(
   categoryId: string | null,
   categoryName: Map<string, string>,

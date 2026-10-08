@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { createSelectedCategories, type CategoryState } from '@/app/(app)/categorias/actions'
 import { EditCategoryButton, NewCategoryButton } from '@/components/CategoryManager'
+import { categoryDisplayName, categoryParts } from '@/lib/categories'
 import type { Category, CategoryKind } from '@/lib/supabase/types'
 
 type Suggestion = Pick<Category, 'id' | 'name' | 'kind' | 'color' | 'icon'>
@@ -91,13 +92,15 @@ export default function CategoryWorkspace({ categories, suggestions }: { categor
           </form>
         ) : (
           <>
-            <p className="mb-5 text-center text-sm text-neutral-400">Edita el nombre o agrupa tus movimientos con subcategorías.</p>
+            <p className="mb-5 text-center text-sm text-neutral-400">Edita el nombre o el icono, o agrupa tus movimientos con subcategorías.</p>
             {roots.length ? <div className="grid gap-3 sm:grid-cols-2">
-              {roots.map((item) => (
+              {roots.map((item) => {
+                const parts = categoryParts(item)
+                return (
                 <div key={item.id} className="rounded-[22px] border border-white/[0.06] bg-white/[0.03] p-4">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/[0.08] text-brand"><CategoryIcon icon={item.icon} /></span>
-                    <span className="min-w-0 flex-1 break-words text-sm font-semibold">{item.name}</span>
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/[0.08] text-brand"><CategoryIcon icon={parts.icon} /></span>
+                    <span className="min-w-0 flex-1 break-words text-sm font-semibold">{parts.name}</span>
                     <EditCategoryButton category={item} categories={categories} />
                   </div>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
@@ -106,11 +109,12 @@ export default function CategoryWorkspace({ categories, suggestions }: { categor
                   </div>
                   {items.filter((child) => child.parent_id === item.id).map((child) => (
                     <div key={child.id} className="mt-3 flex items-center justify-between gap-2 border-t border-white/[0.05] pl-3 pt-3">
-                      <span className="min-w-0 break-words text-sm">{child.name}</span><EditCategoryButton category={child} categories={categories} />
+                      <span className="min-w-0 break-words text-sm">{categoryDisplayName(child)}</span><EditCategoryButton category={child} categories={categories} />
                     </div>
                   ))}
                 </div>
-              ))}
+                )
+              })}
             </div> : <div className="py-8 text-center">
               <p className="font-semibold">Aún no tienes categorías de {kind === 'expense' ? 'gastos' : 'ingresos'}.</p>
               <p className="mt-2 text-sm text-neutral-400">Empieza con las sugeridas o crea una con tu propio nombre.</p>

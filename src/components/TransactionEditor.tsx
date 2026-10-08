@@ -8,7 +8,7 @@ import {
   type EntryState,
 } from '@/app/(app)/dashboard/actions'
 import DateTextField from '@/components/DateTextField'
-import { sortCategoriesForSelect } from '@/lib/categories'
+import { categoryDisplayName, sortCategoriesForSelect } from '@/lib/categories'
 import { formatCOPFromCents, formatDateInputValue } from '@/lib/format'
 import type { Account, Category, Transaction, TransactionType } from '@/lib/supabase/types'
 
@@ -51,7 +51,7 @@ export default function TransactionEditor({
     | 'note'
   >
   accounts: Pick<Account, 'id' | 'name'>[]
-  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>[]
+  categories: Pick<Category, 'id' | 'name' | 'kind' | 'parent_id' | 'icon'>[]
   renderTrigger?: (open: () => void) => React.ReactNode
 }) {
   const router = useRouter()
@@ -236,11 +236,11 @@ export default function TransactionEditor({
                       a.name.localeCompare(b.name, 'es')
                     )
                     return (
-                      <optgroup key={parent.id} label={parent.name}>
-                        <option value={parent.id}>{parent.name}</option>
+                      <optgroup key={parent.id} label={categoryDisplayName(parent)}>
+                        <option value={parent.id}>{categoryDisplayName(parent)}</option>
                         {children.map((child) => (
                           <option key={child.id} value={child.id}>
-                            {child.name}
+                            {categoryDisplayName(child)}
                           </option>
                         ))}
                       </optgroup>

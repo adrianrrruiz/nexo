@@ -12,7 +12,7 @@ import {
 import CreateSubscriptionButton from '@/components/CreateSubscriptionFlow'
 import AmountField from '@/components/AmountField'
 import DateTextField from '@/components/DateTextField'
-import { sortCategoriesForSelect } from '@/lib/categories'
+import { categoryDisplayName, sortCategoriesForSelect } from '@/lib/categories'
 import { formatDateInputValue } from '@/lib/format'
 import { FREQUENCIES, FREQUENCY_LABEL, findSubscriptionCategoryId } from '@/lib/subscriptions'
 import type {
@@ -26,7 +26,7 @@ const FIELD =
   'w-full rounded-2xl border border-white/[0.06] bg-white/[0.05] px-4 py-3.5 text-base outline-none focus:border-brand/60'
 
 export type SubscriptionAccount = Pick<Account, 'id' | 'name'>
-export type SubscriptionCategory = Pick<Category, 'id' | 'name' | 'kind' | 'parent_id'>
+export type SubscriptionCategory = Pick<Category, 'id' | 'name' | 'kind' | 'parent_id' | 'icon'>
 
 export function NewSubscriptionButton({
   accounts,
@@ -250,11 +250,11 @@ function SubscriptionForm({
           >
             <option value="">Categoría (opcional)</option>
             {parentCategories.map((parent) => (
-              <optgroup key={parent.id} label={parent.name}>
-                <option value={parent.id}>{parent.name}</option>
+              <optgroup key={parent.id} label={categoryDisplayName(parent)}>
+                <option value={parent.id}>{categoryDisplayName(parent)}</option>
                 {(childrenByParent.get(parent.id) ?? []).map((child) => (
                   <option key={child.id} value={child.id}>
-                    {child.name}
+                    {categoryDisplayName(child)}
                   </option>
                 ))}
               </optgroup>

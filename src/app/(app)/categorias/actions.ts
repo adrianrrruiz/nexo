@@ -62,6 +62,14 @@ async function getUserId() {
   return { supabase, userId: user?.id ?? null }
 }
 
+/** Un solo emoji (o carácter) como icono; vacío lo quita. */
+function parseIcon(value: FormDataEntryValue | null) {
+  const text = String(value ?? '').trim()
+  if (!text) return null
+  const [first] = new Intl.Segmenter('es', { granularity: 'grapheme' }).segment(text)
+  return first.segment
+}
+
 export async function createCategory(
   _prev: CategoryState,
   formData: FormData
@@ -72,6 +80,7 @@ export async function createCategory(
   const name = String(formData.get('name') ?? '').trim()
   const kind = String(formData.get('kind') ?? 'expense') as CategoryKind
   const parent_id = String(formData.get('parent_id') ?? '') || null
+  const icon = parseIcon(formData.get('icon'))
 
   if (!name) return { ok: false, message: 'Escribe el nombre.' }
 
@@ -80,12 +89,14 @@ export async function createCategory(
     name,
     kind,
     parent_id,
+    icon,
   })
 
   if (error) return { ok: false, message: error.message }
   revalidatePath('/categorias')
   revalidatePath('/dashboard')
   revalidatePath('/movimientos')
+  revalidatePath('/suscripciones')
   return { ok: true, message: 'Categoría creada.' }
 }
 
@@ -107,6 +118,7 @@ export async function updateCategory(
   const name = String(formData.get('name') ?? '').trim()
   const kind = String(formData.get('kind') ?? 'expense') as CategoryKind
   const parent_id = String(formData.get('parent_id') ?? '') || null
+  const icon = parseIcon(formData.get('icon'))
 
   if (!id) return { ok: false, message: 'Categoría inválida.' }
   if (!name) return { ok: false, message: 'Escribe el nombre.' }
@@ -114,7 +126,7 @@ export async function updateCategory(
 
   const { error } = await supabase
     .from('categories')
-    .update({ name, kind, parent_id })
+    .update({ name, kind, parent_id, icon })
     .eq('id', id)
     .eq('user_id', userId)
 
@@ -122,6 +134,7 @@ export async function updateCategory(
   revalidatePath('/categorias')
   revalidatePath('/dashboard')
   revalidatePath('/movimientos')
+  revalidatePath('/suscripciones')
   return { ok: true, message: 'Categoría actualizada.' }
 }
 
