@@ -37,13 +37,13 @@ export async function getPositions(client: InvestmentClient, userId: string) {
   const pageSize = 500
   let lastId: string | null = null
   while (true) {
-    const query = client.from('investment_positions').select('*').eq('user_id', userId).order('id').limit(pageSize)
-    const { data, error }: { data: InvestmentPosition[] | null; error: PostgrestError | null } =
-      await (lastId ? query.gt('id', lastId) : query)
-    if (!data) return { positions: [], error }
-    positions.push(...data)
-    if (data.length < pageSize) return { positions, error: null }
-    lastId = data[data.length - 1].id
+    let query = client.from('investment_positions').select('*').eq('user_id', userId).order('id').limit(pageSize)
+    if (lastId !== null) query = query.gt('id', lastId)
+    const page: { data: InvestmentPosition[] | null; error: PostgrestError | null } = await query
+    if (!page.data) return { positions: [], error: page.error }
+    positions.push(...page.data)
+    if (page.data.length < pageSize) return { positions, error: null }
+    lastId = page.data[page.data.length - 1].id
   }
 }
 
