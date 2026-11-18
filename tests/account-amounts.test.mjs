@@ -1,18 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
-import vm from 'node:vm'
 import ts from 'typescript'
 
-function load(path, imports = {}) {
-  const exports = {}
-  const source = ts.transpileModule(readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2021 } }).outputText
-  vm.runInNewContext(source, { exports, require: (name) => {
-    assert.ok(name in imports, `Unexpected import: ${name}`)
-    return imports[name]
-  }, Number, String })
-  return exports
-}
+import { load } from './load.mjs'
+
 const amounts = load('src/lib/account-amounts.ts')
 const banks = load('src/lib/banks.ts')
 
@@ -70,7 +62,7 @@ test('bank selector stays alphabetical and matches the database enum migrations'
   const catalogValues = banks.SUPPORTED_BANKS.map((bank) => bank.value)
   assert.equal(new Set(catalogValues).size, catalogValues.length)
   assert.deepEqual([...catalogValues].sort(), [...new Set(enumValues)].sort())
-  const source = ts.createSourceFile('types.ts', readFileSync('src/lib/supabase/types.ts', 'utf8'), ts.ScriptTarget.Latest)
+  const source = ts.createSourceFile('types.ts', readFileSync('packages/shared/src/types.ts', 'utf8'), ts.ScriptTarget.Latest)
   const bankType = source.statements.find((statement) => ts.isTypeAliasDeclaration(statement) && statement.name.text === 'SupportedBank')
   assert.deepEqual(bankType.type.types.map((type) => type.literal.text).sort(), [...catalogValues].sort())
 })

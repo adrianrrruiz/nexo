@@ -2,40 +2,58 @@
   "name": "nexo",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:push": "supabase db push",
-    "db:reset": "supabase db reset",
-    "gen:types": "supabase gen types typescript --local > src/lib/supabase/types.ts",
+    "db:push": "supabase db push --linked",
+    "db:reset": "supabase db reset --local",
+    "gen:types": "supabase gen types typescript --local > packages/shared/src/types.ts",
     "test:categories": "node --test tests/category-actions.test.mjs",
     "test:accounts": "node --test tests/account-amounts.test.mjs",
-    "test:subscriptions": "node --test tests/subscription-actions.test.mjs"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "1.26.0",
-    "@supabase/ssr": "^0.12.0",
-    "@supabase/supabase-js": "^2.110.2",
-    "mcp-handler": "1.1.0",
-    "next": "16.2.10",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "zod": "3.25.76"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.10",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "test:subscriptions": "node --test tests/subscription-actions.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:transactions": "node --test tests/transaction-actions.test.mjs",
+    "test:investments": "node --test tests/investments.test.mjs",
+    "test": "npm run test:categories && npm run test:accounts && npm run test:subscriptions && npm run test:transactions && npm run test:investments"
   },
   "allowScripts": {
     "sharp@0.34.5": true,
     "unrs-resolver@1.12.2": true
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/papaparse": "5.3.16",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": "24.x"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.26.0",
+    "@nexo/shared": "*",
+    "@supabase/ssr": "0.12.0",
+    "@supabase/supabase-js": "2.110.2",
+    "mcp-handler": "1.1.0",
+    "next": "16.4.6",
+    "papaparse": "5.5.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "yahoo-finance2": "4.0.2",
+    "zod": "3.25.76"
   }
 }

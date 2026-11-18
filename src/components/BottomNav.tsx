@@ -71,6 +71,14 @@ const ITEMS = [
   },
 ]
 
+const INVESTMENTS = {
+  href: '/inversiones',
+  label: 'Inversiones',
+  icon: <path d="M3 3v17h18M6.5 15l4-4 3 2.5L20 7m-4 0h4v4" />,
+}
+
+const DESKTOP_ITEMS = [...ITEMS.slice(0, 1), INVESTMENTS, ...ITEMS.slice(1)]
+
 export default function BottomNav() {
   const pathname = usePathname()
   const activeIndex = ITEMS.findIndex((item) => pathname.startsWith(item.href))
@@ -87,8 +95,8 @@ export default function BottomNav() {
           </div>
         </Link>
         <nav aria-label="Navegación principal" className="space-y-1.5">
-          {ITEMS.map((item, index) => (
-            <NavLink key={item.href} item={item} active={index === currentIndex} desktop />
+          {DESKTOP_ITEMS.map((item) => (
+            <NavLink key={item.href} item={item} active={pathname.startsWith(item.href)} desktop />
           ))}
         </nav>
         <p className="mt-auto px-3 text-xs leading-5 text-neutral-600">

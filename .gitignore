@@ -40,3 +40,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Workspaces
+**/node_modules/
+**/.next/
+**/out/
+!**/.env.example
+
+# Local documents and screenshots
+/tmp/

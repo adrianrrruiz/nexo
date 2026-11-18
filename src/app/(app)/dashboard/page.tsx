@@ -19,6 +19,8 @@ import {
   categoryDisplayName,
 } from '@/lib/categories'
 import { getTransactionMeta } from '@/lib/transaction-meta'
+import { investmentNetWorth, valuePositions } from '@nexo/shared/investments'
+import { getInvestmentData } from '@/lib/investments/data'
 import type {
   AccountBalance,
   Account,
@@ -50,6 +52,7 @@ export default async function DashboardPage() {
     recentRes,
     monthRes,
     dueRes,
+    portfolio,
   ] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
     supabase.from('account_balances').select('*'),
@@ -76,6 +79,7 @@ export default async function DashboardPage() {
       .eq('active', true)
       .lte('next_charge_on', today)
       .order('next_charge_on'),
+    getInvestmentData(supabase, user.id),
   ])
 
   const queryError = [
@@ -137,7 +141,10 @@ export default async function DashboardPage() {
     overdue: (subscription.next_charge_until ?? subscription.next_charge_on) < today,
   }))
 
-  const netWorth = balances.reduce((s, b) => s + Number(b.balance), 0)
+  const copPositions = portfolio.error ? [] : valuePositions(portfolio.positions, portfolio.market, 'COP')
+  const wealth = investmentNetWorth(balances, copPositions, portfolio.market.usdCop)
+  const wealthPartial = Boolean(portfolio.error || wealth.missingPositions || wealth.missingAccounts)
+  const investmentCount = copPositions.filter((position) => position.quantity > 0).length
   const monthIncome = month
     .filter((t) => t.type === 'income')
     .reduce((s, t) => s + Number(t.amount), 0)
@@ -193,8 +200,31 @@ export default async function DashboardPage() {
           Patrimonio neto
         </p>
         <p className="mt-1.5 break-words text-[clamp(1.5rem,7vw,2.25rem)] font-bold tracking-tight text-neutral-950 lg:text-5xl">
-          {formatCOP(netWorth)}
+          {formatCOP(wealth.total)}
         </p>
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-x-5 gap-y-3 border-t border-black/15 pt-3 text-emerald-950">
+          <dl className="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+            <div>
+              <dt>Cuentas y deudas</dt>
+              <dd className="mt-0.5 font-semibold">{formatCOP(wealth.accounts)}</dd>
+            </div>
+            <div>
+              <dt>Inversiones incluidas</dt>
+              <dd className="mt-0.5 font-semibold">{portfolio.error ? '—' : formatCOP(wealth.investments)}</dd>
+            </div>
+          </dl>
+          <Link href="/inversiones" className="inline-flex min-h-11 items-center gap-1 rounded-xl bg-emerald-950 px-3 text-xs font-semibold text-white hover:bg-neutral-900 focus-visible:outline-2 focus-visible:outline-emerald-950 focus-visible:outline-offset-2">
+            Ver inversiones <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+        {(wealthPartial || wealth.coveredByBalance > 0 || investmentCount > 0) && (
+          <p className="mt-2 text-xs font-medium leading-relaxed text-emerald-950">
+            {portfolio.error ? 'Inversiones temporalmente no disponibles. El total refleja los saldos de cuentas disponibles.'
+              : wealthPartial ? 'Total parcial. Faltan precios o tasas para valorar algunos activos.'
+              : wealth.coveredByBalance > 0 ? 'Para las cuentas vinculadas con precios pendientes se usa el saldo de la cuenta.'
+              : 'El valor de las inversiones usa los últimos precios guardados.'}
+          </p>
+        )}
         <div className="mt-5 flex flex-wrap items-center gap-2 text-xs font-semibold">
           <span className="rounded-full bg-black/15 px-3 py-1.5 text-emerald-950">
             ↑ {formatCOP(monthIncome)}

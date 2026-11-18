@@ -1,33 +1,26 @@
 # Nexo
 
-App de finanzas personales (PWA). Registro manual y dashboard.
-**Next.js 16 + Supabase**, mobile-first.
+PWA de finanzas personales para celular y escritorio con movimientos, patrimonio e inversiones.
+**Next.js 16 + Supabase**.
 
 ## Stack
 
 - **Next.js 16** (App Router, PWA) + **React 19** + **Tailwind 4**
 - **Supabase** (Postgres, Auth, RLS) — acceso vía `@supabase/ssr`
-- Auth por **magic link** (sin contraseñas)
+- Auth por **código de correo OTP** (sin contraseñas)
 
 ## Estructura
 
-```
-src/
-  app/
-    login/            # acceso por magic link
-    auth/callback/    # intercambio de código -> sesión
-    auth/signout/
-    dashboard/        # patrimonio, cuentas, gasto por categoría, movimientos
-    manifest.ts       # web app manifest (PWA)
-  components/
-    QuickEntry.tsx    # alta rápida de gasto/ingreso/transferencia
-  lib/
-    supabase/         # clientes (browser/server), proxy de sesión, tipos
-    format.ts         # formato COP y fechas
-  proxy.ts            # auth gating (antes "middleware")
+```text
+src/                 # Next.js, PWA, MCP y endpoints de Atajos
+packages/
+  shared/             # Tipos, reglas financieras y consultas compartidas
 supabase/
-  migrations/         # esquema versionado
-public/sw.js          # service worker (PWA)
+  migrations/         # Esquema y políticas comunes
+```
+
+```sh
+npm run dev           # web
 ```
 
 ## MCP financiero para Claude
@@ -107,6 +100,14 @@ encabezados de `.mcp.json`.
 (income/expense/transfer/adjustment), `import_batches`. Saldos vía la vista
 `account_balances`. RLS: cada usuario solo ve lo suyo.
 
+## Inversiones
+
+Desde Inicio, abre **Ver inversiones** para registrar posiciones, importar un CSV de Yahoo Finance o del bróker, o recuperar un respaldo JSON con las posiciones de Mi Portafolio Claro. La pantalla incluye una plantilla CSV y una vista previa antes de confirmar.
+
+Nexo guarda las posiciones, las preferencias de moneda y las últimas cotizaciones por usuario. La evolución usa precios históricos con las cantidades actuales. Para reflejar un bróker que ya aparece en Cuentas, vincula sus posiciones a esa cuenta. Nexo sustituye el saldo en Patrimonio cuando todas las posiciones activas vinculadas tienen una valoración en COP. Si quedan precios pendientes, usa el saldo de la cuenta.
+
+La primera activación requiere aplicar la migración de inversiones antes de publicar la nueva versión de la PWA. El proveedor de mercado usa Yahoo Finance desde el servidor y requiere Node.js 22 o superior.
+
 ## Puesta en marcha
 
 ### 1. Variables de entorno
@@ -151,3 +152,7 @@ Para instalarla en el iPhone: ábrela en Safari → Compartir → "Agregar a ini
   movimientos).
 - Fase 2 (pendiente): automatización del registro desde correos de banco con un
   inbox de verificación.
+
+## Despliegue en Vercel
+
+La PWA se compila desde la raíz del repositorio con Node.js 24. El despliegue de producción está conectado a la rama `main`. Aplica primero las migraciones pendientes en el proyecto de Supabase de Nexo.

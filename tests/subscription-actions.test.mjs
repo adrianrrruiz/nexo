@@ -1,14 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import vm from 'node:vm'
-import ts from 'typescript'
-function load(path, imports = {}) {
-  const exports = {}
-  const source = ts.transpileModule(readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-  vm.runInNewContext(source, { exports, require: name => { assert.ok(name in imports, `Unexpected import: ${name}`); return imports[name] } })
-  return exports
-}
+import { load } from './load.mjs'
+
 const format = load('src/lib/format.ts')
 const recurring = load('src/lib/subscriptions.ts', { '@/lib/format': format })
 const amounts = load('src/lib/account-amounts.ts')

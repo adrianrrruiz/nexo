@@ -1,21 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import vm from 'node:vm'
-import ts from 'typescript'
 
-function load(relativePath, imports = {}) {
-  const exports = {}
-  const source = ts.transpileModule(readFileSync(resolve(relativePath), 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
-  }).outputText
-  vm.runInNewContext(source, { exports, require: (name) => {
-    assert.ok(name in imports, `Unexpected import: ${name}`)
-    return imports[name]
-  }, Set, Promise, String, setTimeout, clearTimeout })
-  return exports
-}
+import { load } from './load.mjs'
+
 const catalog = load('src/lib/category-suggestions.ts')
 const announcement = load('src/lib/announcements.ts')
 function setup({ user = { id: 'current-user' }, existing = [], suggestions = [], insertError = null, updateError = null } = {}) {

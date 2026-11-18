@@ -1,0 +1,11 @@
+{
+  "name": "@nexo/shared",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.110.2"
+  }
+}
